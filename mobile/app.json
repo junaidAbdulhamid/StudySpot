@@ -1,0 +1,17 @@
+{
+  "expo": {
+    "name": "StudySpot",
+    "slug": "studyspot",
+    "scheme": "studyspot",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "edu.studyspot.mobile"
+    },
+    "android": { "package": "edu.studyspot.mobile" },
+    "plugins": ["expo-router"],
+    "web": { "bundler": "metro", "output": "single" }
+  }
+}
