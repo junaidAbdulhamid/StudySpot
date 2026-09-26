@@ -1,0 +1,768 @@
+{
+  "campus": {
+    "id": "gmu-fairfax",
+    "name": "George Mason University",
+    "latitude": 38.8303,
+    "longitude": -77.3075
+  },
+  "amenities": [
+    "Outlets",
+    "Whiteboards",
+    "Large tables",
+    "Food nearby",
+    "Printers",
+    "Natural light",
+    "Group rooms"
+  ],
+  "locations": [
+    {
+      "id": "zone-1",
+      "name": "Fenwick Library",
+      "building": "Fenwick Library",
+      "floor": "Floor 4",
+      "currentOccupancy": 28,
+      "noiseLevel": "quiet",
+      "walkingMinutes": 7,
+      "amenities": [
+        "Outlets",
+        "Natural light",
+        "Printers"
+      ],
+      "latitude": 38.828900000000004,
+      "longitude": -77.30850000000001,
+      "capacity": 40,
+      "occupancyConfidence": "high",
+      "isFavorite": true,
+      "image": "library",
+      "description": "A calm corner of campus with comfortable desks and room to focus. Settle in, find your rhythm, and make progress on what matters.",
+      "hours": {
+        "open": "07:00",
+        "close": "00:00"
+      },
+      "predictions": [
+        {
+          "hoursAhead": 0,
+          "label": "Now",
+          "percent": 28
+        },
+        {
+          "hoursAhead": 1,
+          "label": "+1h",
+          "percent": 39
+        },
+        {
+          "hoursAhead": 2,
+          "label": "+2h",
+          "percent": 61
+        },
+        {
+          "hoursAhead": 3,
+          "label": "+3h",
+          "percent": 79
+        },
+        {
+          "hoursAhead": 4,
+          "label": "+4h",
+          "percent": 67
+        }
+      ],
+      "historical": [
+        18,
+        26,
+        42,
+        67,
+        78,
+        65,
+        44,
+        23
+      ]
+    },
+    {
+      "id": "zone-2",
+      "name": "Fenwick Library",
+      "building": "Fenwick Library",
+      "floor": "Floor 1",
+      "currentOccupancy": 72,
+      "noiseLevel": "social",
+      "walkingMinutes": 7,
+      "amenities": [
+        "Outlets",
+        "Large tables",
+        "Food nearby",
+        "Printers"
+      ],
+      "latitude": 38.828900000000004,
+      "longitude": -77.3075,
+      "capacity": 48,
+      "occupancyConfidence": "medium",
+      "isFavorite": false,
+      "image": "library",
+      "description": "An inviting shared space for exchanging ideas, catching up on coursework, and studying with friends between classes.",
+      "hours": {
+        "open": "07:00",
+        "close": "00:00"
+      },
+      "predictions": [
+        {
+          "hoursAhead": 0,
+          "label": "Now",
+          "percent": 72
+        },
+        {
+          "hoursAhead": 1,
+          "label": "+1h",
+          "percent": 83
+        },
+        {
+          "hoursAhead": 2,
+          "label": "+2h",
+          "percent": 98
+        },
+        {
+          "hoursAhead": 3,
+          "label": "+3h",
+          "percent": 98
+        },
+        {
+          "hoursAhead": 4,
+          "label": "+4h",
+          "percent": 98
+        }
+      ],
+      "historical": [
+        18,
+        26,
+        42,
+        67,
+        78,
+        65,
+        44,
+        23
+      ]
+    },
+    {
+      "id": "zone-3",
+      "name": "Fenwick Library",
+      "building": "Fenwick Library",
+      "floor": "Floor 2",
+      "currentOccupancy": 53,
+      "noiseLevel": "moderate",
+      "walkingMinutes": 7,
+      "amenities": [
+        "Outlets",
+        "Whiteboards",
+        "Group rooms",
+        "Printers"
+      ],
+      "latitude": 38.8296,
+      "longitude": -77.3065,
+      "capacity": 56,
+      "occupancyConfidence": "medium",
+      "isFavorite": false,
+      "image": "library",
+      "description": "An inviting shared space for exchanging ideas, catching up on coursework, and studying with friends between classes.",
+      "hours": {
+        "open": "07:00",
+        "close": "00:00"
+      },
+      "predictions": [
+        {
+          "hoursAhead": 0,
+          "label": "Now",
+          "percent": 53
+        },
+        {
+          "hoursAhead": 1,
+          "label": "+1h",
+          "percent": 64
+        },
+        {
+          "hoursAhead": 2,
+          "label": "+2h",
+          "percent": 86
+        },
+        {
+          "hoursAhead": 3,
+          "label": "+3h",
+          "percent": 98
+        },
+        {
+          "hoursAhead": 4,
+          "label": "+4h",
+          "percent": 92
+        }
+      ],
+      "historical": [
+        18,
+        26,
+        42,
+        67,
+        78,
+        65,
+        44,
+        23
+      ]
+    },
+    {
+      "id": "zone-4",
+      "name": "Fenwick Library",
+      "building": "Fenwick Library",
+      "floor": "Floor 3",
+      "currentOccupancy": 36,
+      "noiseLevel": "quiet",
+      "walkingMinutes": 7,
+      "amenities": [
+        "Outlets",
+        "Large tables",
+        "Natural light"
+      ],
+      "latitude": 38.8296,
+      "longitude": -77.30850000000001,
+      "capacity": 64,
+      "occupancyConfidence": "medium",
+      "isFavorite": false,
+      "image": "library",
+      "description": "A calm corner of campus with comfortable desks and room to focus. Settle in, find your rhythm, and make progress on what matters.",
+      "hours": {
+        "open": "07:00",
+        "close": "00:00"
+      },
+      "predictions": [
+        {
+          "hoursAhead": 0,
+          "label": "Now",
+          "percent": 36
+        },
+        {
+          "hoursAhead": 1,
+          "label": "+1h",
+          "percent": 47
+        },
+        {
+          "hoursAhead": 2,
+          "label": "+2h",
+          "percent": 69
+        },
+        {
+          "hoursAhead": 3,
+          "label": "+3h",
+          "percent": 87
+        },
+        {
+          "hoursAhead": 4,
+          "label": "+4h",
+          "percent": 75
+        }
+      ],
+      "historical": [
+        18,
+        26,
+        42,
+        67,
+        78,
+        65,
+        44,
+        23
+      ]
+    },
+    {
+      "id": "zone-5",
+      "name": "Horizon Hall",
+      "building": "Horizon Hall",
+      "floor": "Floor 1",
+      "currentOccupancy": 46,
+      "noiseLevel": "moderate",
+      "walkingMinutes": 4,
+      "amenities": [
+        "Outlets",
+        "Large tables",
+        "Food nearby",
+        "Natural light"
+      ],
+      "latitude": 38.8303,
+      "longitude": -77.3075,
+      "capacity": 72,
+      "occupancyConfidence": "high",
+      "isFavorite": false,
+      "image": "hall",
+      "description": "An inviting shared space for exchanging ideas, catching up on coursework, and studying with friends between classes.",
+      "hours": {
+        "open": "07:00",
+        "close": "22:00"
+      },
+      "predictions": [
+        {
+          "hoursAhead": 0,
+          "label": "Now",
+          "percent": 46
+        },
+        {
+          "hoursAhead": 1,
+          "label": "+1h",
+          "percent": 57
+        },
+        {
+          "hoursAhead": 2,
+          "label": "+2h",
+          "percent": 79
+        },
+        {
+          "hoursAhead": 3,
+          "label": "+3h",
+          "percent": 97
+        },
+        {
+          "hoursAhead": 4,
+          "label": "+4h",
+          "percent": 85
+        }
+      ],
+      "historical": [
+        18,
+        26,
+        42,
+        67,
+        78,
+        65,
+        44,
+        23
+      ]
+    },
+    {
+      "id": "zone-6",
+      "name": "Horizon Hall",
+      "building": "Horizon Hall",
+      "floor": "Floor 2",
+      "currentOccupancy": 32,
+      "noiseLevel": "quiet",
+      "walkingMinutes": 4,
+      "amenities": [
+        "Outlets",
+        "Whiteboards",
+        "Natural light",
+        "Group rooms"
+      ],
+      "latitude": 38.8303,
+      "longitude": -77.3065,
+      "capacity": 80,
+      "occupancyConfidence": "medium",
+      "isFavorite": true,
+      "image": "hall",
+      "description": "A calm corner of campus with comfortable desks and room to focus. Settle in, find your rhythm, and make progress on what matters.",
+      "hours": {
+        "open": "07:00",
+        "close": "22:00"
+      },
+      "predictions": [
+        {
+          "hoursAhead": 0,
+          "label": "Now",
+          "percent": 32
+        },
+        {
+          "hoursAhead": 1,
+          "label": "+1h",
+          "percent": 43
+        },
+        {
+          "hoursAhead": 2,
+          "label": "+2h",
+          "percent": 65
+        },
+        {
+          "hoursAhead": 3,
+          "label": "+3h",
+          "percent": 83
+        },
+        {
+          "hoursAhead": 4,
+          "label": "+4h",
+          "percent": 71
+        }
+      ],
+      "historical": [
+        18,
+        26,
+        42,
+        67,
+        78,
+        65,
+        44,
+        23
+      ]
+    },
+    {
+      "id": "zone-7",
+      "name": "Johnson Center",
+      "building": "Johnson Center",
+      "floor": "Floor 1",
+      "currentOccupancy": 89,
+      "noiseLevel": "social",
+      "walkingMinutes": 3,
+      "amenities": [
+        "Food nearby",
+        "Large tables",
+        "Outlets"
+      ],
+      "latitude": 38.831,
+      "longitude": -77.30850000000001,
+      "capacity": 88,
+      "occupancyConfidence": "medium",
+      "isFavorite": false,
+      "image": "commons",
+      "description": "An inviting shared space for exchanging ideas, catching up on coursework, and studying with friends between classes.",
+      "hours": {
+        "open": "07:00",
+        "close": "22:00"
+      },
+      "predictions": [
+        {
+          "hoursAhead": 0,
+          "label": "Now",
+          "percent": 89
+        },
+        {
+          "hoursAhead": 1,
+          "label": "+1h",
+          "percent": 98
+        },
+        {
+          "hoursAhead": 2,
+          "label": "+2h",
+          "percent": 98
+        },
+        {
+          "hoursAhead": 3,
+          "label": "+3h",
+          "percent": 98
+        },
+        {
+          "hoursAhead": 4,
+          "label": "+4h",
+          "percent": 98
+        }
+      ],
+      "historical": [
+        18,
+        26,
+        42,
+        67,
+        78,
+        65,
+        44,
+        23
+      ]
+    },
+    {
+      "id": "zone-8",
+      "name": "Johnson Center",
+      "building": "Johnson Center",
+      "floor": "Floor 2",
+      "currentOccupancy": 62,
+      "noiseLevel": "moderate",
+      "walkingMinutes": 3,
+      "amenities": [
+        "Outlets",
+        "Printers",
+        "Large tables"
+      ],
+      "latitude": 38.831,
+      "longitude": -77.3075,
+      "capacity": 96,
+      "occupancyConfidence": "medium",
+      "isFavorite": false,
+      "image": "commons",
+      "description": "An inviting shared space for exchanging ideas, catching up on coursework, and studying with friends between classes.",
+      "hours": {
+        "open": "07:00",
+        "close": "22:00"
+      },
+      "predictions": [
+        {
+          "hoursAhead": 0,
+          "label": "Now",
+          "percent": 62
+        },
+        {
+          "hoursAhead": 1,
+          "label": "+1h",
+          "percent": 73
+        },
+        {
+          "hoursAhead": 2,
+          "label": "+2h",
+          "percent": 95
+        },
+        {
+          "hoursAhead": 3,
+          "label": "+3h",
+          "percent": 98
+        },
+        {
+          "hoursAhead": 4,
+          "label": "+4h",
+          "percent": 98
+        }
+      ],
+      "historical": [
+        18,
+        26,
+        42,
+        67,
+        78,
+        65,
+        44,
+        23
+      ]
+    },
+    {
+      "id": "zone-9",
+      "name": "Johnson Center",
+      "building": "Johnson Center",
+      "floor": "Floor 3",
+      "currentOccupancy": 41,
+      "noiseLevel": "quiet",
+      "walkingMinutes": 3,
+      "amenities": [
+        "Outlets",
+        "Natural light",
+        "Group rooms"
+      ],
+      "latitude": 38.8317,
+      "longitude": -77.3065,
+      "capacity": 104,
+      "occupancyConfidence": "high",
+      "isFavorite": false,
+      "image": "commons",
+      "description": "A calm corner of campus with comfortable desks and room to focus. Settle in, find your rhythm, and make progress on what matters.",
+      "hours": {
+        "open": "07:00",
+        "close": "22:00"
+      },
+      "predictions": [
+        {
+          "hoursAhead": 0,
+          "label": "Now",
+          "percent": 41
+        },
+        {
+          "hoursAhead": 1,
+          "label": "+1h",
+          "percent": 52
+        },
+        {
+          "hoursAhead": 2,
+          "label": "+2h",
+          "percent": 74
+        },
+        {
+          "hoursAhead": 3,
+          "label": "+3h",
+          "percent": 92
+        },
+        {
+          "hoursAhead": 4,
+          "label": "+4h",
+          "percent": 80
+        }
+      ],
+      "historical": [
+        18,
+        26,
+        42,
+        67,
+        78,
+        65,
+        44,
+        23
+      ]
+    },
+    {
+      "id": "zone-10",
+      "name": "SUB I",
+      "building": "SUB I",
+      "floor": "Student lounge",
+      "currentOccupancy": 78,
+      "noiseLevel": "social",
+      "walkingMinutes": 6,
+      "amenities": [
+        "Food nearby",
+        "Large tables",
+        "Outlets"
+      ],
+      "latitude": 38.8317,
+      "longitude": -77.30850000000001,
+      "capacity": 112,
+      "occupancyConfidence": "medium",
+      "isFavorite": false,
+      "image": "commons",
+      "description": "An inviting shared space for exchanging ideas, catching up on coursework, and studying with friends between classes.",
+      "hours": {
+        "open": "07:00",
+        "close": "22:00"
+      },
+      "predictions": [
+        {
+          "hoursAhead": 0,
+          "label": "Now",
+          "percent": 78
+        },
+        {
+          "hoursAhead": 1,
+          "label": "+1h",
+          "percent": 89
+        },
+        {
+          "hoursAhead": 2,
+          "label": "+2h",
+          "percent": 98
+        },
+        {
+          "hoursAhead": 3,
+          "label": "+3h",
+          "percent": 98
+        },
+        {
+          "hoursAhead": 4,
+          "label": "+4h",
+          "percent": 98
+        }
+      ],
+      "historical": [
+        18,
+        26,
+        42,
+        67,
+        78,
+        65,
+        44,
+        23
+      ]
+    },
+    {
+      "id": "zone-11",
+      "name": "Peterson Hall",
+      "building": "Peterson Hall",
+      "floor": "Floor 1",
+      "currentOccupancy": 22,
+      "noiseLevel": "quiet",
+      "walkingMinutes": 12,
+      "amenities": [
+        "Outlets",
+        "Whiteboards",
+        "Natural light",
+        "Large tables"
+      ],
+      "latitude": 38.8324,
+      "longitude": -77.3075,
+      "capacity": 120,
+      "occupancyConfidence": "medium",
+      "isFavorite": false,
+      "image": "hall",
+      "description": "A calm corner of campus with comfortable desks and room to focus. Settle in, find your rhythm, and make progress on what matters.",
+      "hours": {
+        "open": "07:00",
+        "close": "22:00"
+      },
+      "predictions": [
+        {
+          "hoursAhead": 0,
+          "label": "Now",
+          "percent": 22
+        },
+        {
+          "hoursAhead": 1,
+          "label": "+1h",
+          "percent": 33
+        },
+        {
+          "hoursAhead": 2,
+          "label": "+2h",
+          "percent": 55
+        },
+        {
+          "hoursAhead": 3,
+          "label": "+3h",
+          "percent": 73
+        },
+        {
+          "hoursAhead": 4,
+          "label": "+4h",
+          "percent": 61
+        }
+      ],
+      "historical": [
+        18,
+        26,
+        42,
+        67,
+        78,
+        65,
+        44,
+        23
+      ]
+    },
+    {
+      "id": "zone-12",
+      "name": "Peterson Hall",
+      "building": "Peterson Hall",
+      "floor": "Floor 2",
+      "currentOccupancy": 18,
+      "noiseLevel": "quiet",
+      "walkingMinutes": 12,
+      "amenities": [
+        "Outlets",
+        "Group rooms",
+        "Whiteboards"
+      ],
+      "latitude": 38.8324,
+      "longitude": -77.3065,
+      "capacity": 128,
+      "occupancyConfidence": "medium",
+      "isFavorite": false,
+      "image": "hall",
+      "description": "A calm corner of campus with comfortable desks and room to focus. Settle in, find your rhythm, and make progress on what matters.",
+      "hours": {
+        "open": "07:00",
+        "close": "22:00"
+      },
+      "predictions": [
+        {
+          "hoursAhead": 0,
+          "label": "Now",
+          "percent": 18
+        },
+        {
+          "hoursAhead": 1,
+          "label": "+1h",
+          "percent": 29
+        },
+        {
+          "hoursAhead": 2,
+          "label": "+2h",
+          "percent": 51
+        },
+        {
+          "hoursAhead": 3,
+          "label": "+3h",
+          "percent": 69
+        },
+        {
+          "hoursAhead": 4,
+          "label": "+4h",
+          "percent": 57
+        }
+      ],
+      "historical": [
+        18,
+        26,
+        42,
+        67,
+        78,
+        65,
+        44,
+        23
+      ]
+    }
+  ]
+}
