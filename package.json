@@ -1,0 +1,1 @@
+{"name":"studyspot-workspace","version":"1.0.0","private":true,"scripts":{"start":"npm --prefix mobile start","ios":"npm --prefix mobile run ios","android":"npm --prefix mobile run android","test":"npm --prefix mobile test","lint":"npm --prefix mobile run lint","typecheck":"npm --prefix mobile run typecheck"}}
