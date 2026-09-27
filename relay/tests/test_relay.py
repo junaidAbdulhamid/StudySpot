@@ -113,6 +113,24 @@ class AdamTests(Fixture):
         adam2.handle_stop(adam.watcher.sessions["root"], adam.watcher.sessions["root"].stop)
         self.assertFalse((self.handoff / "LATEST_HANDOFF.md").exists())
 
+    def test_user_requests_from_either_log_format_are_captured_once(self):
+        msg = f"Files pasted: {self.spec}\n## My request:"
+        item = ev("item_completed", item={"type": "UserMessage",
+                                          "content": [{"type": "text", "text": msg}]})
+        self.rollout("root", [
+            meta("root", str(self.project)),
+            item,  # migrated rollouts only keep this form
+            ev("user_message", message=msg),  # newer ones log both forms
+            ev("item_completed", item={"type": "UserMessage",
+                                       "content": [{"type": "text", "text": "now add auth"}]}),
+        ])
+        adam = self.adam()
+        adam.watcher.poll()
+        requests = [text for _, text in adam.watcher.sessions["root"].user_requests]
+        self.assertEqual(len(requests), 2)
+        self.assertIn("least crowded study spots", requests[0])
+        self.assertEqual(requests[1], "now add auth")
+
     def test_ignores_other_projects_and_guardian_threads(self):
         self.rollout("root", [meta("root", str(self.project))])
         g = self.rollout("guard", [meta("guard", str(self.project), root_id="root",

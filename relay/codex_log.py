@@ -186,6 +186,7 @@ class SessionState:
     stop: Optional[StopEvent] = None
     live: bool = False  # has produced events since Adam started watching
     saw_exec: bool = False
+    last_request_raw: str = ""
 
     def apply(self, obj: dict, role: str) -> List[Step]:
         """Fold one rollout line into the state and return the steps it produced."""
@@ -230,9 +231,7 @@ class SessionState:
             self.stop = None
             step("turn_start", "Codex started working")
         elif ptype == "user_message" and root:
-            text = p.get("message", "")
-            self.user_requests.append((ts, expand_attachments(text)))
-            step("user", one_line(text, 300))
+            self._add_request(ts, p.get("message", ""), step)
         elif ptype == "agent_message" and root:
             msg = p.get("message", "")
             self.messages.append((ts, msg))
@@ -269,8 +268,12 @@ class SessionState:
         elif ptype == "item_completed":
             item = p.get("item") or {}
             itype = item.get("type")
+            if itype == "UserMessage" and root:
+                parts = item.get("content") or []
+                text = "".join(c.get("text", "") for c in parts if isinstance(c, dict))
+                self._add_request(ts, text, step)
             # Sessions that log `exec` tool calls also log each command here; count them once.
-            if itype == "CommandExecution" and not self.saw_exec:
+            elif itype == "CommandExecution" and not self.saw_exec:
                 code = item.get("exit_code")
                 suffix = "" if code in (0, None) else f"  (exit {code})"
                 step("cmd", f"{who}$ {one_line(command_text(item.get('command')), 220)}{suffix}")
@@ -281,6 +284,15 @@ class SessionState:
                     self.files_touched[path] = ctype
                     step("edit", f"{who}{ctype} {self.rel(path)}")
         return out
+
+    def _add_request(self, ts: datetime, text: str, step) -> None:
+        # Codex may log one message both as a user_message event and a UserMessage
+        # item, and older rollouts get migrated to the item form only.
+        if not text.strip() or text.strip() == self.last_request_raw:
+            return
+        self.last_request_raw = text.strip()
+        self.user_requests.append((ts, expand_attachments(text)))
+        step("user", one_line(text, 300))
 
     def rel(self, path: str) -> str:
         if self.cwd and path.startswith(self.cwd.rstrip("/") + "/"):
