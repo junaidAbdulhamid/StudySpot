@@ -187,7 +187,7 @@ function useAuthState() {
       if (failure) throw failure;
       return !!data.session;
     },
-    oauth: async (provider: "google" | "apple") => {
+    oauth: async (provider: "google") => {
       const redirectTo = callbackUrl();
       const { data, error: failure } = await requireAuth().auth.signInWithOAuth(
         { provider, options: { redirectTo, skipBrowserRedirect: true } },

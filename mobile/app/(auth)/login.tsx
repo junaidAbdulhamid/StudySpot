@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { router } from "expo-router";
-import { Platform, View } from "react-native";
+import { View } from "react-native";
 import {
   Button,
   Card,
@@ -15,9 +15,9 @@ import { useAuth } from "../../store/AuthProvider";
 import { authError } from "../../services/auth/errors";
 export default function Login() {
   const { oauth } = useAuth();
-  const [busy, setBusy] = useState<"google" | "apple" | null>(null);
+  const [busy, setBusy] = useState<"google" | null>(null);
   const [error, setError] = useState<string>();
-  const withProvider = async (provider: "google" | "apple") => {
+  const withProvider = async (provider: "google") => {
     setBusy(provider);
     setError(undefined);
     try {
@@ -52,14 +52,6 @@ export default function Login() {
           loading={busy === "google"}
         />
         <Button
-          label="Continue with Apple"
-          icon="logo-apple"
-          onPress={() => void withProvider("apple")}
-          disabled={busy !== null}
-          loading={busy === "apple"}
-          secondary
-        />
-        <Button
           label="Continue with Email"
           icon="mail-outline"
           onPress={() => router.push("/(auth)/email")}
@@ -72,7 +64,7 @@ export default function Login() {
           {error}
         </Copy>
       )}
-      <DemoNote text="Google and Apple authentication are provided by Supabase. StudySpot never sees your password." />
+      <DemoNote text="Google authentication is provided by Supabase. StudySpot never sees your password." />
     </Screen>
   );
 }
