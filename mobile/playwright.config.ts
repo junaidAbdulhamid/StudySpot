@@ -22,7 +22,11 @@ export default defineConfig({
       url: "http://127.0.0.1:8081",
       reuseExistingServer: false,
       timeout: 120000,
-      env: { EXPO_PUBLIC_API_URL: "http://127.0.0.1:8002/api/v1" },
+      env: {
+        EXPO_PUBLIC_API_URL: "http://127.0.0.1:8002/api/v1",
+        EXPO_PUBLIC_SUPABASE_URL: "http://127.0.0.1:8002/test-auth",
+        EXPO_PUBLIC_SUPABASE_ANON_KEY: "e2e-public-key",
+      },
     },
   ],
 });

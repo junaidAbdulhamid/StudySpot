@@ -1,4 +1,11 @@
-import { Stack, ThemeProvider, DarkTheme } from "expo-router";
+import {
+  DarkTheme,
+  Redirect,
+  Stack,
+  ThemeProvider,
+  useGlobalSearchParams,
+  useSegments,
+} from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { AppProvider, useApp } from "../store/AppStore";
@@ -9,6 +16,8 @@ function Navigation() {
   const { ready, signedIn, profileError, reloadProfile, onboardingCompleted } =
     useApp();
   const auth = useAuth();
+  const segments = useSegments();
+  const { edit } = useGlobalSearchParams<{ edit?: string }>();
   if (auth.loading || !ready)
     return (
       <Screen>
@@ -40,6 +49,16 @@ function Navigation() {
         <LoadingSkeleton />
       </Screen>
     );
+  if (signedIn && !onboardingCompleted && segments[0] !== "(auth)")
+    return <Redirect href="/(auth)/preferences" />;
+  if (
+    signedIn &&
+    onboardingCompleted &&
+    segments[0] === "(auth)" &&
+    !auth.recovery &&
+    edit !== "1"
+  )
+    return <Redirect href="/(tabs)" />;
   return (
     <Stack
       screenOptions={{
@@ -50,9 +69,7 @@ function Navigation() {
       <Stack.Screen name="index" />
       <Stack.Screen name="(auth)" />
       <Stack.Screen name="auth/callback" />
-      <Stack.Protected
-        guard={signedIn && onboardingCompleted && !auth.recovery}
-      >
+      <Stack.Protected guard={signedIn && !auth.recovery}>
         <Stack.Screen name="edit-profile" />
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="location/[id]" />

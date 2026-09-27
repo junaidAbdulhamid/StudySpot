@@ -18,9 +18,9 @@ class Settings(BaseSettings):
     @field_validator("supabase_url")
     @classmethod
     def auth_url(cls, value: str) -> str:
-        if value and (
-            not value.startswith("https://") or "@" in value or "?" in value or "#" in value
-        ):
+        secure = value.startswith("https://")
+        loopback = value.startswith("http://127.0.0.1") or value.startswith("http://localhost")
+        if value and (not (secure or loopback) or "@" in value or "?" in value or "#" in value):
             raise ValueError("SUPABASE_URL must be an HTTPS project URL")
         return value.rstrip("/")
 
@@ -47,6 +47,12 @@ class Settings(BaseSettings):
             raise ValueError("Configure explicit CORS origins")
         if self.app_env == "production" and (self.dev_user_enabled or self.debug):
             raise ValueError("Development identity and debug must be disabled in production")
+        if (
+            self.app_env == "production"
+            and self.supabase_url
+            and not self.supabase_url.startswith("https://")
+        ):
+            raise ValueError("Production Supabase authentication requires HTTPS")
         return self
 
 

@@ -3,17 +3,21 @@ account synchronization. Route-level auth behavior (401/503 status codes) is
 covered in test_api.py via the unauthenticated `anonymous_client` fixture.
 """
 
+from concurrent.futures import ThreadPoolExecutor
 from types import SimpleNamespace
 from uuid import uuid4
 
 import httpx
 import pytest
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select
+from sqlalchemy.orm import Session
 
 from app.core.auth import VerifiedIdentity, verify_access_token
 from app.core.exceptions import AppError
 from app.models import Favorite, User, UserPreference
+from app.schemas.catalog import Pagination, PreferenceUpdate
 from app.services.accounts import AccountService
+from app.services.users import FavoriteService, PreferenceService
 
 
 class FakeResponse:
@@ -54,12 +58,14 @@ def test_verify_rejects_on_network_error(monkeypatch):
     assert excinfo.value.code == "AUTH_UNAVAILABLE"
 
 
-@pytest.mark.parametrize("status", [401, 403])
-def test_verify_rejects_invalid_session(monkeypatch, status):
+@pytest.mark.parametrize(
+    ("token", "status"), [("invalid-token", 401), ("expired-token", 401), ("tampered-token", 403)]
+)
+def test_verify_rejects_invalid_session(monkeypatch, token, status):
     configure(monkeypatch)
     monkeypatch.setattr("app.core.auth.httpx.get", lambda *a, **k: FakeResponse(status))
     with pytest.raises(AppError) as excinfo:
-        verify_access_token("expired-token")
+        verify_access_token(token)
     assert excinfo.value.status == 401
     assert excinfo.value.code == "UNAUTHORIZED"
 
@@ -157,6 +163,56 @@ def test_synchronize_is_idempotent_for_preferences(db):
         select(func.count()).select_from(UserPreference).where(UserPreference.user_id == user.id)
     )
     assert count == 1
+
+
+def test_concurrent_first_requests_create_one_account_and_preference(engine):
+    subject = str(uuid4())
+    identity = VerifiedIdentity(subject, f"{subject}@example.edu", "Concurrent")
+
+    def synchronize():
+        with Session(engine) as session:
+            return AccountService(session).synchronize(identity).id
+
+    try:
+        with ThreadPoolExecutor(max_workers=4) as pool:
+            identifiers = list(pool.map(lambda _: synchronize(), range(4)))
+        assert len(set(identifiers)) == 1
+        with Session(engine) as session:
+            assert (
+                session.scalar(
+                    select(func.count()).select_from(User).where(User.auth_provider_id == subject)
+                )
+                == 1
+            )
+            assert (
+                session.scalar(
+                    select(func.count())
+                    .select_from(UserPreference)
+                    .where(UserPreference.user_id == identifiers[0])
+                )
+                == 1
+            )
+    finally:
+        with Session(engine) as session:
+            session.execute(delete(User).where(User.auth_provider_id == subject))
+            session.commit()
+
+
+def test_user_owned_data_is_isolated(db):
+    first = AccountService(db).synchronize(
+        VerifiedIdentity(str(uuid4()), "first@example.edu", "First")
+    )
+    second = AccountService(db).synchronize(
+        VerifiedIdentity(str(uuid4()), "second@example.edu", "Second")
+    )
+    FavoriteService(db).add(first.id, "zone-1")
+    assert FavoriteService(db).list(first.id, Pagination()).total == 1
+    assert FavoriteService(db).list(second.id, Pagination()).total == 0
+    PreferenceService(db).update(first.id, PreferenceUpdate(noise_preference="moderate"))
+    assert PreferenceService(db).get(first.id).noise_preference.value == "moderate"
+    assert PreferenceService(db).get(second.id).noise_preference.value == "quiet"
+    assert first.onboarding_completed is True
+    assert second.onboarding_completed is False
 
 
 def test_delete_application_data_cascades(db):

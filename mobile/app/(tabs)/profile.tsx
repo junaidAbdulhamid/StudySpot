@@ -1,4 +1,5 @@
 import { Pressable, View } from "react-native";
+import { useState } from "react";
 import { router } from "expo-router";
 import {
   Avatar,
@@ -15,8 +16,12 @@ import {
 } from "../../components/common";
 import { useApp } from "../../store/AppStore";
 import { colors as c, spacing as s } from "../../theme";
+import { authError } from "../../services/auth/errors";
 export default function Profile() {
-  const { preferences, logout, storageError, user } = useApp();
+  const { preferences, favorites, logout, storageError, user } = useApp();
+  const [signingOut, setSigningOut] = useState(false);
+  const [confirmingSignOut, setConfirmingSignOut] = useState(false);
+  const [signOutError, setSignOutError] = useState<string>();
   return (
     <Screen>
       <Copy variant="title" style={{ marginBottom: s.xl }}>
@@ -39,6 +44,10 @@ export default function Profile() {
             <Icon name="chevron-forward" size={18} color={c.textMuted} />
           </View>
           <Chip label="MASON STUDENT" icon="school-outline" />
+          <Copy muted variant="caption">
+            {favorites.length} saved{" "}
+            {favorites.length === 1 ? "location" : "locations"}
+          </Copy>
         </Card>
       </Pressable>
       <SectionHeader
@@ -110,22 +119,48 @@ export default function Profile() {
         ))}
       </Card>
       <View style={{ marginTop: s.xl }}>
-        <Button
-          label="Log Out"
-          secondary
-          icon="log-out-outline"
-          onPress={() => {
-            logout();
-            router.replace("/(auth)/login");
-          }}
-        />
+        {confirmingSignOut ? (
+          <Card>
+            <Copy variant="heading">Log out?</Copy>
+            <Copy muted>You’ll need to sign in again on this device.</Copy>
+            <Button
+              label="Confirm Log Out"
+              icon="log-out-outline"
+              loading={signingOut}
+              onPress={async () => {
+                setSigningOut(true);
+                setSignOutError(undefined);
+                try {
+                  await logout();
+                } catch (error) {
+                  setSignOutError(authError(error));
+                } finally {
+                  setSigningOut(false);
+                }
+              }}
+            />
+            <Button
+              label="Cancel"
+              secondary
+              onPress={() => setConfirmingSignOut(false)}
+            />
+          </Card>
+        ) : (
+          <Button
+            label="Log Out"
+            secondary
+            icon="log-out-outline"
+            onPress={() => setConfirmingSignOut(true)}
+          />
+        )}
       </View>
+      {signOutError && <Copy color={c.danger}>{signOutError}</Copy>}
       {storageError && (
         <Copy color={c.warning} style={{ marginTop: s.lg }}>
           {storageError}
         </Copy>
       )}
-      <DemoNote text="StudySpot · Phase 2 · Made for a better study day." />
+      <DemoNote text="StudySpot · Your preferences and favorites follow your account." />
     </Screen>
   );
 }

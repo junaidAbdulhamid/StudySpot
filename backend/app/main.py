@@ -36,7 +36,15 @@ def create_app():
         allow_origins=settings.cors_origins,
         allow_credentials=False,
         allow_methods=["GET", "POST", "PATCH", "DELETE"],
-        allow_headers=["Content-Type", "Authorization"],
+        allow_headers=[
+            "Content-Type",
+            "Authorization",
+            # Public Supabase client headers, needed by the isolated browser-auth
+            # fixture and harmless for the API's explicit-origin CORS policy.
+            "apikey",
+            "x-client-info",
+            "x-supabase-api-version",
+        ],
     )
     register_handlers(app)
     app.include_router(router, prefix=settings.api_v1_prefix)

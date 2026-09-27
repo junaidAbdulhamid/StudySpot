@@ -77,7 +77,8 @@ export default function Preferences() {
               setSaving(false);
               if (!saved) return;
               if (edit) router.back();
-              else router.replace("/(tabs)");
+              // Root navigation redirects after the committed onboarding flag
+              // makes the signed-in application route available.
             }
           }}
         />

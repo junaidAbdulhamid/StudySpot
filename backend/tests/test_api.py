@@ -134,6 +134,15 @@ def test_update_me(client):
     assert client.patch(USER, json={"display_name": None}).status_code == 422
     assert client.patch(USER, json={"avatar_url": "not-https"}).status_code == 422
     assert client.patch(USER, json={"unknown": 1}).status_code == 422
+    for protected in (
+        "id",
+        "auth_provider_id",
+        "email",
+        "points",
+        "reliability_score",
+        "onboarding_completed",
+    ):
+        assert client.patch(USER, json={protected: "forbidden"}).status_code == 422
 
 
 def test_favorites(client):
@@ -165,6 +174,7 @@ def test_preferences(client):
     assert data["study_style"] == "group"
     assert {a["slug"] for a in data["preferred_amenities"]} == {"outlets", "whiteboards"}
     assert data["study_duration_hours"] == original["study_duration_hours"]
+    assert client.get(USER).json()["data"]["onboarding_completed"] is True
     assert (
         client.patch(f"{USER}/preferences", json={"preferred_amenities": []}).json()["data"][
             "preferred_amenities"
@@ -348,6 +358,16 @@ def test_me_returns_503_when_supabase_unconfigured(anonymous_client):
 def test_production_rejects_demo_identity():
     with pytest.raises(ValueError):
         Settings(app_env="production", debug=False, dev_user_enabled=True)
+
+
+def test_production_rejects_insecure_auth_url():
+    with pytest.raises(ValueError):
+        Settings(
+            app_env="production",
+            debug=False,
+            dev_user_enabled=False,
+            supabase_url="http://127.0.0.1:8002/test-auth",
+        )
 
 
 def test_errors_do_not_expose_exception_details(client, db, monkeypatch):

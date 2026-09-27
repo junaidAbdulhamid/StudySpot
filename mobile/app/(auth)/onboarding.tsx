@@ -18,14 +18,14 @@ const slides = [
     title: "Find your perfect place to study.",
     body: "Your campus. Your kind of quiet. Discover a space that helps you do your best work.",
     icon: "leaf-outline" as const,
-    benefit: "Live crowd updates",
+    benefit: "Current campus estimates",
   },
   {
     eyebrow: "A LITTLE FORESIGHT GOES A LONG WAY.",
     title: "Know before you go.",
     body: "See crowd levels and look ahead. Make room for a productive afternoon, without the guesswork.",
     icon: "pulse-outline" as const,
-    benefit: "ML-powered predictions",
+    benefit: "Seeded forecast previews",
   },
   {
     eyebrow: "MAKE YOURSELF AT HOME.",

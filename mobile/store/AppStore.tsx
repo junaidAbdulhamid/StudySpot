@@ -143,6 +143,8 @@ function AccountStore({ children }: React.PropsWithChildren) {
   useEffect(() => {
     if (auth.user?.id) void reloadProfile();
     return () => {
+      // Invalidate requests from this exact account store when its keyed provider unmounts.
+      // eslint-disable-next-line react-hooks/exhaustive-deps
       session.current++;
     };
   }, [auth.user?.id, reloadProfile]);

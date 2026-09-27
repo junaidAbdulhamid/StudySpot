@@ -11,15 +11,14 @@ Executed September 27, 2026, continuing a session Codex left mid-implementation 
 | --- | --- | --- |
 | Backend lint | `ruff check .` | Passed |
 | Backend format | `ruff format --check .` | Passed |
-| Backend tests | `pytest -q` | Passed, 68 tests (was 49; +19 for `/me` routes and the new `app/core/auth.py` / `app/services/accounts.py`) |
+| Backend tests | `pytest -q` | Passed, 72 tests, including concurrent synchronization, two-user isolation, protected profile fields, onboarding persistence, and production HTTPS enforcement |
 | Schema drift | `alembic check` after `alembic upgrade head` | "No new upgrade operations detected" against migration `0002` |
 | Mobile typecheck | `npm run typecheck` | Passed |
-| Mobile lint | `npm run lint` | Passed (1 pre-existing warning, unrelated to auth, in `AppStore.tsx`) |
+| Mobile lint | `npm run lint` | Passed with no findings |
 | Mobile format | `npm run format:check` | Passed |
-| Mobile tests | `npm test` | Passed, 16 tests (unchanged) |
+| Mobile tests | `npm test` | Passed, 23 tests, including routing, secure storage, bearer headers, refresh/retry, invalidation, and account-switch races |
 | Bundles | `npx expo export --platform all` | Passed; web, iOS and Android bundles all built |
-| Browser smoke | Playwright against `expo start --web`, no configured Supabase project | Onboarding → login → email/sign-up/forgot-password screens all render without console or page errors; "Continue with Mason/Apple" and "Send Reset Link" surface "Sign-in needs Supabase configuration" rather than crashing |
-| Browser journeys | `npm run test:e2e` | **Not run — see limitation below** |
+| Browser journeys | `npm run test:e2e` | Passed, 4/4 using the official Supabase client and test-only provider fixture |
 
 ### What changed
 
@@ -48,15 +47,15 @@ Executed September 27, 2026, continuing a session Codex left mid-implementation 
   root `README.md` describe the new `/me` endpoints and setup steps in place of the removed
   development-identity routes.
 
-### Limitation: browser journeys need a real Supabase project
+### Phase 3 browser validation
 
-`mobile/tests/e2e/demo.spec.ts` predates this work and drives the demo login button and the removed
-`/users/{id}` endpoints directly. It cannot be fixed by editing paths alone: the actual sign-in step now
-goes through Supabase's hosted OAuth (Google/Apple) or email/password, and there is no configured
-Supabase project in this environment to sign into, nor a way to fabricate one safely. This is a
-prerequisite the project owner needs to provide (a Supabase project, plus a seeded test account with
-known credentials for the email/password path Playwright can actually automate) — see
-`.handoff/JUNAID_REPORT.md` for the specific next step.
+`mobile/tests/e2e/demo.spec.ts` uses the real `supabase-js` client against
+`backend/tests/e2e_auth.py`, an isolated GoTrue-shaped provider fixture with no production import path.
+The journeys verify fresh email account creation, preference onboarding, server-backed favorites and
+preferences, reload/session restoration, confirmed logout, account switching and isolation, invalid
+credentials, and recoverable backend failure. A real Supabase project is configured (see
+[docs/authentication.md](authentication.md)) with email/password and Google sign-in enabled and verified
+live; Apple sign-in was removed rather than configured (no Apple Developer account for this project).
 
 ## Phase 2 — backend and API integration
 

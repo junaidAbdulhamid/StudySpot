@@ -18,6 +18,7 @@ export default function Email() {
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
   const [confirmSent, setConfirmSent] = useState(false);
@@ -29,6 +30,10 @@ export default function Email() {
     }
     if (password.length < 6) {
       setError("Password must be at least 6 characters.");
+      return;
+    }
+    if (mode === "signup" && password !== confirm) {
+      setError("Passwords don't match.");
       return;
     }
     setBusy(true);
@@ -84,9 +89,25 @@ export default function Email() {
           onChangeText={setPassword}
           placeholder="••••••••"
           secureTextEntry
-          returnKeyType="go"
-          onSubmitEditing={() => void submit()}
+          returnKeyType={mode === "signup" ? "next" : "go"}
+          onSubmitEditing={mode === "signin" ? () => void submit() : undefined}
         />
+        {mode === "signup" && (
+          <>
+            <TextField
+              label="Confirm password"
+              value={confirm}
+              onChangeText={setConfirm}
+              placeholder="••••••••"
+              secureTextEntry
+              returnKeyType="go"
+              onSubmitEditing={() => void submit()}
+            />
+            <Copy muted variant="caption">
+              Use at least 6 characters. A longer, unique password is safer.
+            </Copy>
+          </>
+        )}
         {mode === "signin" && (
           <Pressable
             accessibilityRole="button"
@@ -115,6 +136,7 @@ export default function Email() {
           accessibilityRole="button"
           onPress={() => {
             setError(undefined);
+            setConfirm("");
             setMode((m) => (m === "signin" ? "signup" : "signin"));
           }}
           style={{ minHeight: 44, justifyContent: "center" }}

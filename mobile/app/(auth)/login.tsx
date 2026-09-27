@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { router } from "expo-router";
-import { View } from "react-native";
+import { Platform, View } from "react-native";
 import {
   Button,
   Card,
@@ -45,8 +45,8 @@ export default function Login() {
         <Copy variant="heading">Welcome to your campus companion</Copy>
         <Copy muted>Sign in to save favorites and study preferences.</Copy>
         <Button
-          label="Continue with Mason"
-          icon="school-outline"
+          label="Continue with Google"
+          icon="logo-google"
           onPress={() => void withProvider("google")}
           disabled={busy !== null}
           loading={busy === "google"}
@@ -72,7 +72,7 @@ export default function Login() {
           {error}
         </Copy>
       )}
-      <DemoNote text="Mason accounts sign in with Google. StudySpot never sees your password." />
+      <DemoNote text="Google and Apple authentication are provided by Supabase. StudySpot never sees your password." />
     </Screen>
   );
 }

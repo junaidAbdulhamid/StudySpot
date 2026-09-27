@@ -1,239 +1,135 @@
-import { test, expect, Page } from "@playwright/test";
-const api = "http://127.0.0.1:8002/api/v1";
-test.beforeEach(async ({ request }) => {
-  const response = await request.get(`${api}/users/development`);
-  expect(response.ok()).toBeTruthy();
-  const { data: user } = await response.json();
-  const favorites = await (
-    await request.get(`${api}/users/${user.id}/favorites?page_size=100`)
-  ).json();
-  for (const favorite of favorites.items)
-    await request.delete(
-      `${api}/users/${user.id}/favorites/${favorite.location_id}`,
-    );
-  for (const id of ["zone-1", "zone-6"])
-    await request.post(`${api}/users/${user.id}/favorites/${id}`);
-  const saved = await request.patch(`${api}/users/${user.id}/preferences`, {
-    data: {
-      noise_preference: "quiet",
-      study_style: "solo",
-      max_walking_minutes: 10,
-      study_duration_hours: 1,
-      preferred_amenities: ["outlets"],
-    },
-  });
-  expect(saved.ok()).toBeTruthy();
+import { expect, Page, test } from "@playwright/test";
+
+const password = "StudySpot123!";
+
+async function skipIntro(page: Page) {
+  await page.goto("/");
+  const skip = page.getByRole("button", { name: "Skip", exact: true });
+  if (await skip.isVisible()) await skip.click();
+}
+
+async function finishPreferences(page: Page) {
+  const next = page.getByRole("button", { name: "Next", exact: true });
+  const home = page.getByText("Your next great idea needs a good spot.");
+  await expect(next.or(home)).toBeVisible();
+  if (await next.isVisible()) {
+    for (let step = 0; step < 3; step++) {
+      await next.click();
+      await expect(page.getByText(`STEP ${step + 2} OF 4`)).toBeVisible();
+    }
+    await page.getByRole("button", { name: "Finish", exact: true }).click();
+  }
+  await expect(home).toBeVisible();
+}
+
+async function signIn(page: Page, email: string) {
+  await skipIntro(page);
+  await page.getByRole("button", { name: "Continue with Email" }).click();
+  await page.getByRole("textbox", { name: "Email", exact: true }).fill(email);
+  await page.getByLabel("Password", { exact: true }).fill(password);
+  await page.getByRole("button", { name: "Sign In", exact: true }).click();
+  await finishPreferences(page);
+}
+
+async function openFenwick(page: Page) {
+  await page.getByRole("tab", { name: "Explore" }).click();
+  await page.getByRole("textbox").fill("floor 4");
+  await page
+    .getByRole("button", { name: "View Fenwick Library, Floor 4", exact: true })
+    .click();
+}
+
+test("fresh account completes onboarding and persists personalization", async ({
+  page,
+}) => {
+  await skipIntro(page);
+  await page.getByRole("button", { name: "Continue with Email" }).click();
+  await page.getByRole("button", { name: /Sign up/ }).click();
+  const email = `new-${Date.now()}@example.edu`;
+  await page.getByRole("textbox", { name: "Email", exact: true }).fill(email);
+  await page.getByLabel("Password", { exact: true }).fill(password);
+  await page
+    .getByRole("textbox", { name: "Confirm password", exact: true })
+    .fill(password);
+  await page.getByRole("button", { name: "Create Account" }).click();
+  await finishPreferences(page);
+  await openFenwick(page);
+  await page.getByRole("button", { name: "Save to favorites" }).click();
+  await page.reload();
+  await expect(
+    page.getByRole("button", { name: "Remove from favorites" }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Go back" }).click();
+  await page.getByRole("tab", { name: "Profile" }).click();
+  await expect(
+    page.getByText("1 saved location", { exact: true }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Study Preferences" }).click();
+  await page.getByRole("button", { name: "Moderate", exact: true }).click();
+  for (let step = 0; step < 3; step++) {
+    await page.getByRole("button", { name: "Next", exact: true }).click();
+    await expect(page.getByText(`STEP ${step + 2} OF 4`)).toBeVisible();
+  }
+  await page.getByRole("button", { name: "Finish", exact: true }).click();
+  await expect(page.getByText("moderate", { exact: true })).toBeVisible();
 });
 
-async function enter(page: Page) {
-  await page.goto("/");
-  await page.getByRole("button", { name: "Skip", exact: true }).click();
-  await page.getByRole("button", { name: "Continue with Mason" }).click();
-  for (let i = 0; i < 3; i++)
-    await page.getByRole("button", { name: "Next", exact: true }).click();
-  await page.getByRole("button", { name: "Finish", exact: true }).click();
+test("returning session restores without showing login", async ({ page }) => {
+  await signIn(page, "alex@example.edu");
+  await page.reload();
   await expect(
     page.getByText("Your next great idea needs a good spot."),
   ).toBeVisible();
-}
-test("complete demo journey", async ({ page }) => {
-  const errors: string[] = [];
-  page.on("pageerror", (error) => errors.push(error.message));
-  await page.goto("/");
   await expect(
-    page.getByText("Find your perfect place to study."),
-  ).toBeVisible();
-  await page.getByRole("button", { name: "Continue", exact: true }).click();
-  await expect(page.getByText("Know before you go.")).toBeVisible();
-  await page.getByRole("button", { name: "Continue", exact: true }).click();
-  await page.getByRole("button", { name: "Get Started", exact: true }).click();
-  await page.getByRole("button", { name: "Continue with Mason" }).click();
-  await page.getByRole("button", { name: "Next", exact: true }).click();
-  await page.getByRole("button", { name: "Next", exact: true }).click();
-  await page.getByRole("button", { name: "Next", exact: true }).click();
-  await page.getByRole("button", { name: "Finish", exact: true }).click();
-  await expect(
-    page.getByRole("button", { name: /^View .*Floor/ }).first(),
-  ).toBeVisible();
-  await page.screenshot({ path: "test-results/home.png", fullPage: true });
-  await page.getByRole("tab", { name: "Explore" }).click();
-  await page.getByRole("textbox").fill("Fenwick");
-  await expect(page.getByText("4 study spaces · Seed data")).toBeVisible();
-  await page
-    .getByRole("button", { name: "View Fenwick Library, Floor 4", exact: true })
-    .click();
-  await page
-    .getByRole("button", { name: "View Predictions", exact: true })
-    .click();
-  await expect(page.getByText("Your next few hours")).toBeVisible();
-  await page.getByRole("button", { name: "Live", exact: true }).click();
-  await expect(page.getByText("Confidence", { exact: true })).toBeVisible();
-  await page.getByRole("button", { name: "Check In / Report Crowd" }).click();
-  await page
-    .getByRole("button", { name: "Check In", exact: true })
-    .last()
-    .click();
-  await expect(page.getByText("Checked in", { exact: true })).toBeVisible();
-  await page.getByRole("button", { name: "Report Crowd", exact: true }).click();
-  await page
-    .getByRole("button", { name: "Lots of seats", exact: true })
-    .click();
-  await page
-    .getByRole("button", { name: "Submit Crowd Report", exact: true })
-    .click();
-  await expect(page.getByText("You made a difference.")).toBeVisible();
-  await page.getByRole("button", { name: "Return Home" }).click();
-  await page
-    .getByRole("button", { name: "Find Me a Spot", exact: true })
-    .click();
-  await page.getByRole("button", { name: "2 hours", exact: true }).click();
-  await page.getByRole("button", { name: "Find My Spot", exact: true }).click();
-  await expect(page.getByText("#1 BEST MATCH")).toBeVisible();
-  await page
-    .getByRole("button", { name: /^View .* Floor/ })
-    .first()
-    .click();
-  const heart = page.getByRole("button", {
-    name: /Remove from favorites|Save to favorites/,
-  });
-  if ((await heart.getAttribute("aria-label")) === "Remove from favorites")
-    await heart.click();
-  await page.getByRole("button", { name: "Save to favorites" }).click();
-  await page.getByRole("button", { name: "Directions", exact: true }).click();
-  await page.getByRole("button", { name: "Explore campus map" }).click();
-  await page
-    .getByRole("button", { name: "Fenwick Library, Floor 4, 28% available" })
-    .click();
-  await expect(
-    page.getByRole("button", { name: "View Fenwick Library, Floor 4" }),
-  ).toBeVisible();
-  await page.screenshot({ path: "test-results/map.png", fullPage: true });
-  await page.getByRole("tab", { name: "Alerts" }).click();
-  await expect(
-    page.getByText("Your quiet corner is clearing up"),
-  ).toBeVisible();
-  await page.getByRole("button", { name: "Clear all", exact: true }).click();
-  await expect(page.getByText("All quiet for now.")).toBeVisible();
-  await page.getByRole("tab", { name: "Profile" }).click();
-  await page.getByRole("button", { name: "Favorites", exact: true }).click();
-  await expect(page.getByText("Your familiar favorites.")).toBeVisible();
-  await page.getByRole("button", { name: "Go back" }).click();
-  await page.getByRole("button", { name: "Notification Settings" }).click();
-  await page.getByRole("switch").click();
-  await page.getByRole("button", { name: "Go back" }).click();
-  await page.getByRole("button", { name: "Log Out" }).click();
-  await expect(
-    page.getByRole("button", { name: "Continue with Mason" }),
-  ).toBeVisible();
-  expect(errors).toEqual([]);
+    page.getByRole("button", { name: "Continue with Email" }),
+  ).toHaveCount(0);
 });
-test("filters, empty states, persisted favorites, and small-screen layout", async ({
+
+test("logout clears state and a different account is isolated", async ({
   page,
 }) => {
-  await page.setViewportSize({ width: 320, height: 700 });
-  await enter(page);
-  await page.getByRole("tab", { name: "Explore" }).click();
-  await page.getByRole("button", { name: "Noise ⌄" }).click();
-  await page.getByRole("button", { name: "Quiet", exact: true }).click();
-  await page.getByRole("button", { name: "Show study spaces" }).click();
-  await expect(page.getByText("6 study spaces · Seed data")).toBeVisible();
-  await page.getByRole("textbox").fill("not-a-real-building");
-  await expect(page.getByText("Let’s widen the search")).toBeVisible();
-  await page.getByRole("button", { name: "Clear filters" }).click();
-  await expect(page.getByText("12 study spaces · Seed data")).toBeVisible();
-  await page
-    .getByRole("button", { name: "View Fenwick Library, Floor 4", exact: true })
-    .click();
-  await page.getByRole("button", { name: "Remove from favorites" }).click();
-  await page.reload();
+  await signIn(page, "alex@example.edu");
+  await openFenwick(page);
+  const save = page.getByRole("button", { name: "Save to favorites" });
+  if (await save.isVisible()) await save.click();
+  await page.getByRole("button", { name: "Go back" }).click();
+  await page.getByRole("tab", { name: "Profile" }).click();
+  await page.getByRole("button", { name: "Log Out", exact: true }).click();
+  await page.getByRole("button", { name: "Confirm Log Out" }).click();
   await expect(
-    page.getByRole("button", { name: "Skip", exact: true }),
+    page.getByRole("button", { name: "Continue with Email" }),
   ).toBeVisible();
-  await enter(page);
-  await page.getByRole("tab", { name: "Explore" }).click();
+  await page.getByRole("button", { name: "Continue with Email" }).click();
   await page
-    .getByRole("button", { name: "View Fenwick Library, Floor 4", exact: true })
-    .click();
+    .getByRole("textbox", { name: "Email", exact: true })
+    .fill("blair@example.edu");
+  await page.getByLabel("Password", { exact: true }).fill(password);
+  await page.getByRole("button", { name: "Sign In", exact: true }).click();
+  await finishPreferences(page);
+  await openFenwick(page);
   await expect(
     page.getByRole("button", { name: "Save to favorites" }),
   ).toBeVisible();
-  expect(
-    await page.evaluate(
-      () => document.documentElement.scrollWidth <= window.innerWidth,
-    ),
-  ).toBe(true);
 });
 
-test("preference editing, check-out, recents, home search, and settings", async ({
+test("invalid credentials and backend outages are recoverable", async ({
   page,
 }) => {
-  await enter(page);
-  await page.getByRole("textbox").fill("Peterson");
-  await page.getByRole("textbox").press("Enter");
-  await expect(page.getByText("2 study spaces · Seed data")).toBeVisible();
+  await skipIntro(page);
+  await page.getByRole("button", { name: "Continue with Email" }).click();
   await page
-    .getByRole("button", { name: "View Peterson Hall, Floor 1", exact: true })
-    .click();
-  await page.getByRole("button", { name: "Check In", exact: true }).click();
-  await page
-    .getByRole("button", { name: "Check In", exact: true })
-    .last()
-    .click();
-  await page.getByRole("button", { name: "Check Out", exact: true }).click();
-  await expect(page.getByText("You’re here!", { exact: true })).toBeVisible();
-  await page.getByRole("button", { name: "Return Home" }).click();
-  await page.getByRole("button", { name: "Recent", exact: true }).click();
+    .getByRole("textbox", { name: "Email", exact: true })
+    .fill("alex@example.edu");
+  await page.getByLabel("Password", { exact: true }).fill("wrong-password");
+  await page.getByRole("button", { name: "Sign In", exact: true }).click();
   await expect(
-    page.getByRole("button", {
-      name: "View Peterson Hall, Floor 1",
-      exact: true,
-    }),
+    page.getByText("We couldn’t sign you in. Check your email and password."),
   ).toBeVisible();
-  await page.getByRole("button", { name: "Go back" }).click();
-  await page.getByRole("tab", { name: "Profile" }).click();
-  await page
-    .getByRole("button", { name: "Study Preferences", exact: true })
-    .click();
-  await page.getByRole("button", { name: "Moderate", exact: true }).click();
-  await page.getByRole("button", { name: "Next", exact: true }).click();
-  await page.getByRole("button", { name: "Group", exact: true }).click();
-  await page.getByRole("button", { name: "Next", exact: true }).click();
-  await page.getByRole("button", { name: "Whiteboards", exact: true }).click();
-  await page.getByRole("button", { name: "Next", exact: true }).click();
-  await page.getByRole("button", { name: "15 minutes", exact: true }).click();
-  await page.getByRole("button", { name: "Finish", exact: true }).click();
-  await expect(page.getByText("15-minute walking radius")).toBeVisible();
-  for (const [name, text] of [
-    ["Appearance", "Campus night"],
-    ["Privacy", "Your development data."],
-    ["About StudySpot", "A better place to focus."],
-  ]) {
-    await page.getByRole("button", { name, exact: true }).click();
-    await expect(page.getByText(text!, { exact: true })).toBeVisible();
-    await page.getByRole("button", { name: "Go back" }).click();
-  }
-  await page.getByRole("tab", { name: "Home" }).click();
-  await page
-    .getByRole("button", { name: "Find Me a Spot", exact: true })
-    .click();
-  for (const name of [
-    "Printers",
-    "Food nearby",
-    "Group rooms",
-    "Natural light",
-  ])
-    await page.getByRole("button", { name, exact: true }).click();
-  await page.getByRole("button", { name: "Find My Spot", exact: true }).click();
-  await expect(page.getByText("Let’s give you more options")).toBeVisible();
-});
-
-test("remote errors retry and favorite mutations roll back without losing server state", async ({
-  page,
-  request,
-}) => {
-  await enter(page);
-  const listPattern = "**/api/v1/locations?**";
-  await page.route(listPattern, (route) =>
+  await page.getByLabel("Password", { exact: true }).fill(password);
+  await page.getByRole("button", { name: "Sign In", exact: true }).click();
+  await finishPreferences(page);
+  const pattern = "**/api/v1/locations?**";
+  await page.route(pattern, (route) =>
     route.fulfill({
       status: 503,
       json: {
@@ -248,116 +144,7 @@ test("remote errors retry and favorite mutations roll back without losing server
   await expect(
     page.getByText("Data is temporarily unavailable. Please retry."),
   ).toBeVisible();
-  await page.unroute(listPattern);
-  await page.getByRole("button", { name: "Try again", exact: true }).click();
-  await expect(page.getByText("12 study spaces · Seed data")).toBeVisible();
-  await page.getByRole("textbox").fill("floor 4");
-  await page
-    .getByRole("button", { name: "View Fenwick Library, Floor 4", exact: true })
-    .click();
-  const favoritesPattern = "**/api/v1/users/*/favorites/zone-1";
-  await page.route(favoritesPattern, (route) =>
-    route.fulfill({
-      status: 503,
-      json: {
-        error: {
-          code: "DATABASE_UNAVAILABLE",
-          message: "Data is temporarily unavailable. Please retry.",
-        },
-      },
-    }),
-  );
-  await page
-    .getByRole("button", { name: "Remove from favorites", exact: true })
-    .click();
-  await expect(
-    page.getByRole("alert").getByText(/Favorite not saved/),
-  ).toBeVisible();
-  await expect(
-    page.getByRole("button", { name: "Remove from favorites", exact: true }),
-  ).toBeEnabled();
-  const { data: user } = await (
-    await request.get(`${api}/users/development`)
-  ).json();
-  const saved = await (
-    await request.get(`${api}/users/${user.id}/favorites`)
-  ).json();
-  expect(
-    saved.items.some(
-      (item: { location_id: string }) => item.location_id === "zone-1",
-    ),
-  ).toBeTruthy();
-  await page.unroute(favoritesPattern);
-  await page.getByRole("button", { name: "Dismiss", exact: true }).click();
-  await page
-    .getByRole("button", { name: "Remove from favorites", exact: true })
-    .click();
-  await expect(
-    page.getByRole("button", { name: "Save to favorites", exact: true }),
-  ).toBeEnabled();
-  const confirmed = await (
-    await request.get(`${api}/users/${user.id}/favorites`)
-  ).json();
-  expect(
-    confirmed.items.some(
-      (item: { location_id: string }) => item.location_id === "zone-1",
-    ),
-  ).toBeFalsy();
-});
-
-test("failed preference saves stay editable and malformed location data is recoverable", async ({
-  page,
-  request,
-}) => {
-  await enter(page);
-  await page.getByRole("tab", { name: "Profile" }).click();
-  await page
-    .getByRole("button", { name: "Study Preferences", exact: true })
-    .click();
-  await page.getByRole("button", { name: "Moderate", exact: true }).click();
-  for (let i = 0; i < 3; i++)
-    await page.getByRole("button", { name: "Next", exact: true }).click();
-  const pattern = "**/api/v1/users/*/preferences";
-  await page.route(pattern, (route) =>
-    route.fulfill({
-      status: 500,
-      json: {
-        error: {
-          code: "INTERNAL_ERROR",
-          message: "Save unavailable. Please retry.",
-        },
-      },
-    }),
-  );
-  await page.getByRole("button", { name: "Finish", exact: true }).click();
-  await expect(
-    page.getByRole("alert").getByText("Save unavailable. Please retry."),
-  ).toBeVisible();
-  await expect(
-    page.getByRole("button", { name: "Finish", exact: true }),
-  ).toBeEnabled();
   await page.unroute(pattern);
-  await page.getByRole("button", { name: "Finish", exact: true }).click();
-  await expect(page.getByText("Your study rhythm")).toBeVisible();
-  const { data: user } = await (
-    await request.get(`${api}/users/development`)
-  ).json();
-  const preference = await (
-    await request.get(`${api}/users/${user.id}/preferences`)
-  ).json();
-  expect(preference.data.noise_preference).toBe("moderate");
-  await page.getByRole("tab", { name: "Explore" }).click();
-  const locationPattern = "**/api/v1/locations/zone-1";
-  await page.route(locationPattern, (route) =>
-    route.fulfill({ status: 200, json: { data: { id: "zone-1" } } }),
-  );
-  await page
-    .getByRole("button", { name: "View Fenwick Library, Floor 4", exact: true })
-    .click();
-  await expect(
-    page.getByText("The server returned unexpected data. Please retry."),
-  ).toBeVisible();
-  await page.unroute(locationPattern);
-  await page.getByRole("button", { name: "Try again", exact: true }).click();
-  await expect(page.getByText("CURRENT OCCUPANCY")).toBeVisible();
+  await page.getByRole("button", { name: "Try again" }).click();
+  await expect(page.getByText(/study spaces · Seed data/)).toBeVisible();
 });

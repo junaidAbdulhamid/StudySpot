@@ -244,6 +244,7 @@ export function TextField({
   onSubmitEditing?: () => void;
   error?: string;
 }) {
+  const [masked, setMasked] = React.useState(secureTextEntry);
   return (
     <View style={{ gap: s.xs }}>
       <Copy variant="caption" muted>
@@ -256,7 +257,7 @@ export function TextField({
           placeholderTextColor={c.textMuted}
           value={value}
           onChangeText={onChangeText}
-          secureTextEntry={secureTextEntry}
+          secureTextEntry={masked}
           autoCapitalize={autoCapitalize}
           autoCorrect={false}
           keyboardType={keyboardType}
@@ -264,6 +265,17 @@ export function TextField({
           onSubmitEditing={onSubmitEditing}
           style={styles.input}
         />
+        {secureTextEntry && (
+          <IconButton
+            icon={masked ? "eye-outline" : "eye-off-outline"}
+            label={
+              masked
+                ? `Show ${label.toLowerCase()}`
+                : `Hide ${label.toLowerCase()}`
+            }
+            onPress={() => setMasked((value) => !value)}
+          />
+        )}
       </View>
       {error && (
         <Copy color={c.danger} variant="caption">

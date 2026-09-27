@@ -46,9 +46,9 @@ npx expo start
 Sign-in needs a Supabase project: create one at [supabase.com](https://supabase.com), then set
 `SUPABASE_URL` / `SUPABASE_ANON_KEY` in `backend/.env` and `EXPO_PUBLIC_SUPABASE_URL` /
 `EXPO_PUBLIC_SUPABASE_ANON_KEY` in `mobile/.env` from the project's Settings → API page. Add
-`studyspot://auth/callback` under Authentication → URL Configuration → Redirect URLs, and enable the
-Google and Apple providers if you want those buttons to work — email/password sign-in needs no extra
-provider setup. Without these variables the app still starts and the login screen still renders, but
+`studyspot://auth/callback` under Authentication → URL Configuration → Redirect URLs, then follow
+[the authentication setup guide](docs/authentication.md) for Google, bundle identifiers, and provider
+callback URLs. Without these variables the app still starts and the login screen still renders, but
 every sign-in button fails with "Sign-in needs Supabase configuration."
 
 Start the app at onboarding, sign in or create an account, and finish the preference wizard. Logging out
@@ -119,7 +119,7 @@ relay/                 Existing repository tooling, preserved
 - Screens call services; services call the API client; the client validates every response with zod,
   applies a 10s timeout, and maps failures to actionable messages. A malformed or unreachable API
   surfaces an error state instead of a crash or a silent fixture.
-- `AuthProvider` owns the Supabase session (email/password, Google, Apple, password reset) and exposes it
+- `AuthProvider` owns the Supabase session (email/password, Google, password reset) and exposes it
   through `services/auth/bridge.ts` so the API client can attach and refresh bearer tokens without a
   circular import. Session tokens live in `expo-secure-store` (chunked past its per-item size limit),
   never in AsyncStorage. `AppStore` owns everything downstream of that session — profile, favorites,
@@ -171,12 +171,10 @@ The ER diagram, constraints, indexes, thresholds and seed counts are in
 
 Backend tests refuse to run against anything but a local database whose name ends in `_test`, and bypass
 Supabase entirely via `app.dependency_overrides` — see [backend/README.md](backend/README.md#tests).
-The Playwright browser journeys (`npm run test:e2e`) predate Phase 3's real sign-in and still drive the
-old development-identity endpoints and demo login button; **they need to be rewritten against a real (or
-test) Supabase project before they can pass again**, since there is no way to complete Google/Apple OAuth
-or read a session token from outside the app without one. This is the one piece of Phase 3 left
-unverified — everything else (backend tests, typecheck, lint, format, unit tests, and all three
-`expo export` bundle targets) passes as of the state described in `.handoff/JUNAID_REPORT.md`.
+The Playwright journeys use the official Supabase client with a test-only GoTrue-shaped HTTP fixture.
+They cover email account creation, onboarding, session restoration, persistence, logout, account
+switching, and user-data isolation without production accounts. Google sign-in is configured against a
+real Supabase project; see [docs/authentication.md](docs/authentication.md) for the setup.
 
 See [docs/VALIDATION.md](docs/VALIDATION.md) for executed checks with results, remaining device QA, and
 dependency advisories. Do not run `npm audit fix --force`: the suggested fix downgrades Expo to an

@@ -13,6 +13,7 @@ import {
   preferencesToDto,
 } from "../services/api/mappers";
 import { defaultPreferences } from "../services/userService";
+import { AuthBridge } from "../services/auth/bridge";
 const transport =
   (body: unknown, status = 200): typeof fetch =>
   async () =>
@@ -97,6 +98,117 @@ test("paginated service consumers read every page", async () => {
   });
   assert.deepEqual(items, [1, 2, 3]);
   assert.deepEqual(pages, [1, 2]);
+});
+
+test("protected requests attach a bearer token", async () => {
+  let authorization: string | null = null;
+  const auth: AuthBridge = {
+    subject: () => "user-a",
+    token: async () => "access-a",
+    refresh: async () => null,
+    invalidate: async () => {},
+  };
+  const client = createApiClient(
+    "http://test",
+    100,
+    async (_input, init) => {
+      authorization = new Headers(init?.headers).get("Authorization");
+      return new Response(JSON.stringify({ ok: true }), { status: 200 });
+    },
+    () => auth,
+  );
+  await client.request("/me", z.object({ ok: z.boolean() }));
+  assert.equal(authorization, "Bearer access-a");
+});
+
+test("a 401 refreshes once and retries with the new token", async () => {
+  const tokens: (string | null)[] = [];
+  let calls = 0;
+  let refreshes = 0;
+  const auth: AuthBridge = {
+    subject: () => "user-a",
+    token: async () => "expired",
+    refresh: async () => {
+      refreshes++;
+      return "fresh";
+    },
+    invalidate: async () => assert.fail("valid refresh must not sign out"),
+  };
+  const client = createApiClient(
+    "http://test",
+    100,
+    async (_input, init) => {
+      calls++;
+      tokens.push(new Headers(init?.headers).get("Authorization"));
+      return new Response(JSON.stringify(calls === 1 ? {} : { ok: true }), {
+        status: calls === 1 ? 401 : 200,
+      });
+    },
+    () => auth,
+  );
+  assert.deepEqual(
+    await client.request("/me/preferences", z.object({ ok: z.boolean() })),
+    { ok: true },
+  );
+  assert.equal(refreshes, 1);
+  assert.equal(calls, 2);
+  assert.deepEqual(tokens, ["Bearer expired", "Bearer fresh"]);
+});
+
+test("an invalid refresh signs out once and never loops", async () => {
+  let calls = 0;
+  let invalidations = 0;
+  const auth: AuthBridge = {
+    subject: () => "user-a",
+    token: async () => "expired",
+    refresh: async () => null,
+    invalidate: async () => {
+      invalidations++;
+    },
+  };
+  await assert.rejects(
+    createApiClient(
+      "http://test",
+      100,
+      async () => {
+        calls++;
+        return new Response(JSON.stringify({}), { status: 401 });
+      },
+      () => auth,
+    ).request("/me", z.unknown()),
+    (error: unknown) =>
+      error instanceof ApiError && error.code === "UNAUTHORIZED",
+  );
+  assert.equal(calls, 1);
+  assert.equal(invalidations, 1);
+});
+
+test("account switching cancels an in-flight protected response", async () => {
+  let subject = "user-a";
+  const auth: AuthBridge = {
+    subject: () => subject,
+    token: async () => {
+      subject = "user-b";
+      return "token-a";
+    },
+    refresh: async () => null,
+    invalidate: async () => {},
+  };
+  let sent = false;
+  await assert.rejects(
+    createApiClient(
+      "http://test",
+      100,
+      async () => {
+        sent = true;
+        return new Response(JSON.stringify({}));
+      },
+      () => auth,
+    ).request("/me", z.unknown()),
+    (error: unknown) =>
+      error instanceof ApiError && error.code === "SESSION_CHANGED",
+  );
+  assert.equal(sent, false);
 });
 test("DTO mapping preserves missing data and never fabricates distance", () => {
   const dto = locationDto.parse({

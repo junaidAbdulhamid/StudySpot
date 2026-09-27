@@ -48,24 +48,24 @@ export default function Settings() {
           <Copy variant="heading">Campus night</Copy>
           <Chip label="Dark forest · Active" selected />
           <Copy muted>
-            Calm colors, clear contrast, and a little room to breathe. Phase 2
-            is designed around our signature dark appearance.
+            Calm colors, clear contrast, and a little room to breathe, built
+            around our signature dark appearance.
           </Copy>
         </Card>
       ) : section === "privacy" ? (
         <Card>
           <Icon name="shield-checkmark-outline" size={40} color={c.primary} />
-          <Copy variant="heading">Your development data.</Copy>
+          <Copy variant="heading">Your account data.</Copy>
           <Copy muted>
-            Preferences and favorites are stored in the development database.
+            Preferences and favorites are stored with your StudySpot account.
             Notification settings stay on this device. Check-ins, reports, and
             recent spaces last only for your current session.
           </Copy>
           <Copy muted>
-            No account credentials, GPS location, analytics, or crowd reports
-            are collected. Preferences and favorites are sent to your configured
-            API. Campus estimates and forecasts are seeded examples. Clearing
-            app data does not delete server preferences or favorites.
+            Passwords are handled by Supabase and are never sent to StudySpot.
+            StudySpot does not request GPS access, collect movement history, or
+            send authentication data to analytics. Clearing app data does not
+            delete server preferences or favorites.
           </Copy>
         </Card>
       ) : (
@@ -74,14 +74,14 @@ export default function Settings() {
           <Copy variant="title">A better place to focus.</Copy>
           <Copy muted>
             StudySpot helps Mason students discover study spaces that fit their
-            day. Phase 2 is an interactive product preview, built with React
-            Native and Expo.
+            day. It is built with React Native, Expo, Supabase Auth, and
+            FastAPI.
           </Copy>
           <Copy muted>
-            Live crowdsourcing, accounts, real maps, and personalized forecasts
-            are planned for future phases.
+            Live crowdsourcing, real maps, and trained forecasts are planned for
+            future phases.
           </Copy>
-          <Chip label="VERSION 0.2 · PHASE 2" />
+          <Chip label="VERSION 0.3 · PHASE 3" />
         </Card>
       )}
     </Screen>
