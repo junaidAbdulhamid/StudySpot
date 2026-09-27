@@ -10,28 +10,30 @@ export const defaultPreferences: UserPreferences = {
   duration: 1,
 };
 export const userService = {
-  async getDevelopmentUser() {
-    return (await apiClient.request("/users/development", dataSchema(userDto)))
-      .data;
+  async updateProfile(display_name: string) {
+    return (
+      await apiClient.request("/me", dataSchema(userDto), {
+        method: "PATCH",
+        body: { display_name },
+      })
+    ).data;
   },
-  async getPreferences(userId: string) {
+  async getMe() {
+    return (await apiClient.request("/me", dataSchema(userDto))).data;
+  },
+  async getPreferences() {
     return mapPreferencesDto(
-      (
-        await apiClient.request(
-          `/users/${encodeURIComponent(userId)}/preferences`,
-          dataSchema(preferencesDto),
-        )
-      ).data,
+      (await apiClient.request("/me/preferences", dataSchema(preferencesDto)))
+        .data,
     );
   },
-  async savePreferences(userId: string, preferences: UserPreferences) {
+  async savePreferences(preferences: UserPreferences) {
     return mapPreferencesDto(
       (
-        await apiClient.request(
-          `/users/${encodeURIComponent(userId)}/preferences`,
-          dataSchema(preferencesDto),
-          { method: "PATCH", body: preferencesToDto(preferences) },
-        )
+        await apiClient.request("/me/preferences", dataSchema(preferencesDto), {
+          method: "PATCH",
+          body: preferencesToDto(preferences),
+        })
       ).data,
     );
   },

@@ -1,3 +1,4 @@
+import { useAuth } from "../../store/AuthProvider";
 import { useState } from "react";
 import { ImageBackground, View } from "react-native";
 import Animated, { FadeIn, ReduceMotion } from "react-native-reanimated";
@@ -35,6 +36,11 @@ const slides = [
   },
 ];
 export default function Onboarding() {
+  const { finishIntro } = useAuth();
+  const finish = async () => {
+    await finishIntro();
+    router.replace("/(auth)/login");
+  };
   const [index, setIndex] = useState(0);
   const slide = slides[index]!;
   return (
@@ -49,7 +55,7 @@ export default function Onboarding() {
           <Icon name="leaf" color={c.primary} />
           <Copy variant="heading">studyspot</Copy>
         </View>
-        <Chip label="Skip" onPress={() => router.push("/(auth)/login")} />
+        <Chip label="Skip" onPress={() => void finish()} />
       </View>
       <Animated.View
         key={index}
@@ -111,9 +117,7 @@ export default function Onboarding() {
       <Button
         label={index === 2 ? "Get Started" : "Continue"}
         icon="arrow-forward"
-        onPress={() =>
-          index < 2 ? setIndex(index + 1) : router.push("/(auth)/login")
-        }
+        onPress={() => (index < 2 ? setIndex(index + 1) : void finish())}
       />
       <Copy
         muted

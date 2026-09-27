@@ -221,6 +221,58 @@ export function Chip({
   );
 }
 export const FilterChip = Chip;
+export function TextField({
+  label,
+  value,
+  onChangeText,
+  placeholder,
+  secureTextEntry = false,
+  autoCapitalize = "none",
+  keyboardType = "default",
+  returnKeyType,
+  onSubmitEditing,
+  error,
+}: {
+  label: string;
+  value: string;
+  onChangeText: (text: string) => void;
+  placeholder?: string;
+  secureTextEntry?: boolean;
+  autoCapitalize?: "none" | "sentences" | "words" | "characters";
+  keyboardType?: "default" | "email-address";
+  returnKeyType?: "done" | "next" | "go";
+  onSubmitEditing?: () => void;
+  error?: string;
+}) {
+  return (
+    <View style={{ gap: s.xs }}>
+      <Copy variant="caption" muted>
+        {label}
+      </Copy>
+      <View style={[styles.search, error ? { borderColor: c.danger } : null]}>
+        <TextInput
+          accessibilityLabel={label}
+          placeholder={placeholder}
+          placeholderTextColor={c.textMuted}
+          value={value}
+          onChangeText={onChangeText}
+          secureTextEntry={secureTextEntry}
+          autoCapitalize={autoCapitalize}
+          autoCorrect={false}
+          keyboardType={keyboardType}
+          returnKeyType={returnKeyType}
+          onSubmitEditing={onSubmitEditing}
+          style={styles.input}
+        />
+      </View>
+      {error && (
+        <Copy color={c.danger} variant="caption">
+          {error}
+        </Copy>
+      )}
+    </View>
+  );
+}
 export function SearchBar({
   value,
   onChangeText,

@@ -22,18 +22,25 @@ export default function Profile() {
       <Copy variant="title" style={{ marginBottom: s.xl }}>
         Your space.
       </Copy>
-      <Card>
-        <View style={styles.row}>
-          <Avatar name={user.name} />
-          <View>
-            <Copy variant="heading">{user.name}</Copy>
-            <Copy muted variant="caption">
-              {user.email}
-            </Copy>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Edit profile"
+        onPress={() => router.push("/edit-profile")}
+      >
+        <Card>
+          <View style={styles.row}>
+            <Avatar name={user.name} />
+            <View style={{ flex: 1 }}>
+              <Copy variant="heading">{user.name}</Copy>
+              <Copy muted variant="caption">
+                {user.email}
+              </Copy>
+            </View>
+            <Icon name="chevron-forward" size={18} color={c.textMuted} />
           </View>
-        </View>
-        <Chip label="MASON STUDENT · DEMO" icon="school-outline" />
-      </Card>
+          <Chip label="MASON STUDENT" icon="school-outline" />
+        </Card>
+      </Pressable>
       <SectionHeader
         title="Your study rhythm"
         action="Edit"

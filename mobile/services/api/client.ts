@@ -1,3 +1,4 @@
+import { getAuthBridge, AuthBridge } from "../auth/bridge";
 import { z } from "zod";
 export class ApiError extends Error {
   constructor(
@@ -17,6 +18,7 @@ export function createApiClient(
   baseUrl: string | undefined,
   timeoutMs = 10000,
   transport: typeof fetch = fetch,
+  auth: () => AuthBridge | undefined = getAuthBridge,
 ) {
   return {
     async request<T>(
@@ -39,12 +41,26 @@ export function createApiClient(
         controller.abort();
       }, timeoutMs);
       try {
-        const response = await transport(
-          `${baseUrl.replace(/\/$/, "")}${path}`,
-          {
+        const bridge = auth();
+        const protectedRequest = path === "/me" || path.startsWith("/me/");
+        const subject = bridge?.subject();
+        const ensureIdentity = () => {
+          if (protectedRequest && (!subject || bridge?.subject() !== subject))
+            throw new ApiError(
+              "SESSION_CHANGED",
+              "Please sign in to continue.",
+              401,
+            );
+        };
+        ensureIdentity();
+        let token = protectedRequest ? await bridge?.token() : null;
+        ensureIdentity();
+        const send = () =>
+          transport(`${baseUrl.replace(/\/$/, "")}${path}`, {
             method: options.method ?? "GET",
             headers: {
               Accept: "application/json",
+              ...(token ? { Authorization: `Bearer ${token}` } : {}),
               ...(options.body === undefined
                 ? {}
                 : { "Content-Type": "application/json" }),
@@ -54,8 +70,24 @@ export function createApiClient(
                 ? undefined
                 : JSON.stringify(options.body),
             signal: controller.signal,
-          },
-        );
+          });
+        let response = await send();
+        if (protectedRequest && response.status === 401 && bridge) {
+          ensureIdentity();
+          token = await bridge.refresh();
+          ensureIdentity();
+          if (token) response = await send(); // At most one retry; /me mutations are idempotent.
+          if (!token || response.status === 401) {
+            ensureIdentity();
+            await bridge.invalidate();
+            throw new ApiError(
+              "UNAUTHORIZED",
+              "Your session has expired. Please sign in again.",
+              401,
+            );
+          }
+        }
+        ensureIdentity();
         let body: unknown;
         try {
           body = response.status === 204 ? undefined : await response.json();

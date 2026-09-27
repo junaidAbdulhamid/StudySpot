@@ -61,8 +61,8 @@ export default function Preferences() {
       <PreferenceFields value={value} onChange={setValue} step={step} />
       <Card>
         <Copy muted>
-          Preferences are saved to your development profile in StudySpot’s
-          database. Walking preferences are reserved for a future phase.
+          Preferences are saved to your account in StudySpot’s database. Walking
+          preferences are reserved for a future phase.
         </Copy>
       </Card>
       <View style={{ gap: s.md, marginTop: s["2xl"] }}>

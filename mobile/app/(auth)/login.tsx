@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { errorMessage } from "../../services/api/client";
 import { router } from "expo-router";
 import { View } from "react-native";
 import {
@@ -12,21 +11,21 @@ import {
   DemoNote,
 } from "../../components/common";
 import { colors as c, spacing as s } from "../../theme";
-import { useApp } from "../../store/AppStore";
+import { useAuth } from "../../store/AuthProvider";
+import { authError } from "../../services/auth/errors";
 export default function Login() {
-  const { login } = useApp();
-  const [busy, setBusy] = useState(false);
+  const { oauth } = useAuth();
+  const [busy, setBusy] = useState<"google" | "apple" | null>(null);
   const [error, setError] = useState<string>();
-  const enter = async () => {
-    setBusy(true);
+  const withProvider = async (provider: "google" | "apple") => {
+    setBusy(provider);
     setError(undefined);
     try {
-      await login();
-      router.replace("/(auth)/preferences");
+      await oauth(provider);
     } catch (e) {
-      setError(errorMessage(e));
+      setError(authError(e));
     } finally {
-      setBusy(false);
+      setBusy(null);
     }
   };
   return (
@@ -44,35 +43,27 @@ export default function Login() {
       </View>
       <Card>
         <Copy variant="heading">Welcome to your campus companion</Copy>
-        <Copy muted>
-          Explore the development preview with a demo account. Choose any option
-          to continue.
-        </Copy>
+        <Copy muted>Sign in to save favorites and study preferences.</Copy>
         <Button
           label="Continue with Mason"
           icon="school-outline"
-          onPress={enter}
-          disabled={busy}
-        />
-        <Button
-          label="Continue with Google"
-          icon="logo-google"
-          onPress={enter}
-          disabled={busy}
-          secondary
+          onPress={() => void withProvider("google")}
+          disabled={busy !== null}
+          loading={busy === "google"}
         />
         <Button
           label="Continue with Apple"
           icon="logo-apple"
-          onPress={enter}
-          disabled={busy}
+          onPress={() => void withProvider("apple")}
+          disabled={busy !== null}
+          loading={busy === "apple"}
           secondary
         />
         <Button
           label="Continue with Email"
           icon="mail-outline"
-          onPress={enter}
-          disabled={busy}
+          onPress={() => router.push("/(auth)/email")}
+          disabled={busy !== null}
           secondary
         />
       </Card>
@@ -81,8 +72,7 @@ export default function Login() {
           {error}
         </Copy>
       )}
-      {busy && <Copy muted>Connecting to your development profile…</Copy>}
-      <DemoNote text="Demo sign-in only. No credentials are collected and no provider account is connected." />
+      <DemoNote text="Mason accounts sign in with Google. StudySpot never sees your password." />
     </Screen>
   );
 }

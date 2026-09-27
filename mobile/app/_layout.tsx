@@ -3,10 +3,38 @@ import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { AppProvider, useApp } from "../store/AppStore";
 import { colors } from "../theme";
-import { LoadingSkeleton, Screen } from "../components/common";
+import { AuthProvider, useAuth } from "../store/AuthProvider";
+import { LoadingSkeleton, Screen, Copy, Button } from "../components/common";
 function Navigation() {
-  const { ready, signedIn } = useApp();
-  if (!ready)
+  const { ready, signedIn, profileError, reloadProfile, onboardingCompleted } =
+    useApp();
+  const auth = useAuth();
+  if (auth.loading || !ready)
+    return (
+      <Screen>
+        <LoadingSkeleton />
+      </Screen>
+    );
+  if (auth.error && !auth.session)
+    return (
+      <Screen>
+        <Copy>{auth.error}</Copy>
+        <Button label="Retry" onPress={() => void auth.bootstrap()} />
+      </Screen>
+    );
+  if (auth.isAuthenticated && profileError)
+    return (
+      <Screen>
+        <Copy>{profileError}</Copy>
+        <Button label="Retry" onPress={() => void reloadProfile()} />
+        <Button
+          label="Sign out"
+          secondary
+          onPress={() => void auth.signOut().catch(() => {})}
+        />
+      </Screen>
+    );
+  if (auth.isAuthenticated && !signedIn)
     return (
       <Screen>
         <LoadingSkeleton />
@@ -21,7 +49,11 @@ function Navigation() {
     >
       <Stack.Screen name="index" />
       <Stack.Screen name="(auth)" />
-      <Stack.Protected guard={signedIn}>
+      <Stack.Screen name="auth/callback" />
+      <Stack.Protected
+        guard={signedIn && onboardingCompleted && !auth.recovery}
+      >
+        <Stack.Screen name="edit-profile" />
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="location/[id]" />
         <Stack.Screen name="predictions/[id]" />
@@ -52,10 +84,12 @@ export default function RootLayout() {
           },
         }}
       >
-        <AppProvider>
-          <StatusBar style="light" />
-          <Navigation />
-        </AppProvider>
+        <AuthProvider>
+          <AppProvider>
+            <StatusBar style="light" />
+            <Navigation />
+          </AppProvider>
+        </AuthProvider>
       </ThemeProvider>
     </SafeAreaProvider>
   );

@@ -70,6 +70,7 @@ export const userDto = z.object({
   id: z.string(),
   email: z.string(),
   display_name: z.string(),
+  onboarding_completed: z.boolean(),
   avatar_url: z.string().nullable(),
   points: z.number(),
   reliability_score: z.number().min(0).max(1),
