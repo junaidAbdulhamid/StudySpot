@@ -1,31 +1,17 @@
-from typing import Annotated
+from fastapi import APIRouter
 
-from fastapi import APIRouter, Depends
+from app.api.dependencies import CurrentUser, Database
+from app.schemas.catalog import Data, ProfileUpdate, UserRead, errors
+from app.services.accounts import AccountService
 
-from app.api.dependencies import Database, DevUser, development_user_id
-from app.schemas.catalog import Data, UserRead, errors
-from app.services.users import UserService
-
-router = APIRouter(prefix="/users", tags=["development user"])
+router = APIRouter(prefix="/me", tags=["account"])
 
 
-@router.get(
-    "/development",
-    response_model=Data[UserRead],
-    summary="Resolve the configured development user",
-    description="Development identity discovery, not authentication. Disabled unless explicitly enabled in development/test.",
-    responses=errors(403, 503),
-)
-def development_user(db: Database, identity: Annotated[str, Depends(development_user_id)]):
-    return {"data": UserService(db).get(identity)}
+@router.get("", response_model=Data[UserRead], responses=errors(401, 503))
+def get_me(current_user: CurrentUser):
+    return {"data": current_user}
 
 
-@router.get(
-    "/{user_id}",
-    response_model=Data[UserRead],
-    summary="Get the development user",
-    description="Phase 3 replaces the path identity with an authenticated subject.",
-    responses=errors(403, 404, 503),
-)
-def get_user(db: Database, identity: DevUser):
-    return {"data": UserService(db).get(identity)}
+@router.patch("", response_model=Data[UserRead], responses=errors(401, 422, 503))
+def update_me(patch: ProfileUpdate, db: Database, current_user: CurrentUser):
+    return {"data": AccountService(db).update(current_user, patch)}

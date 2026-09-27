@@ -142,7 +142,11 @@ class User(Identity, Timestamps, Base):
         CheckConstraint("points >= 0", name="points"),
         CheckConstraint("reliability_score BETWEEN 0 AND 1", name="reliability"),
     )
-    email: Mapped[str] = mapped_column(String(254), unique=True)
+    auth_provider_id: Mapped[str | None] = mapped_column(String(36), unique=True)
+    onboarding_completed: Mapped[bool] = mapped_column(
+        Boolean, default=False, server_default="false"
+    )
+    email: Mapped[str] = mapped_column(String(254))
     display_name: Mapped[str] = mapped_column(String(120))
     avatar_url: Mapped[str | None] = mapped_column(String(500))
     points: Mapped[int] = mapped_column(Integer, default=0, server_default="0")

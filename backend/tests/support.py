@@ -6,6 +6,7 @@ from pathlib import Path
 from dotenv import dotenv_values
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine import make_url
+from sqlalchemy.exc import OperationalError
 
 
 def configure_test_database():
@@ -37,10 +38,16 @@ def ensure_database(url):
     admin = create_engine(
         url.set(database="postgres"), isolation_level="AUTOCOMMIT", hide_parameters=True
     )
-    with admin.connect() as connection:
-        if not connection.scalar(
-            text("SELECT 1 FROM pg_database WHERE datname=:name"), {"name": url.database}
-        ):
-            quoted = connection.dialect.identifier_preparer.quote(url.database)
-            connection.execute(text(f"CREATE DATABASE {quoted}"))
-    admin.dispose()
+    try:
+        with admin.connect() as connection:
+            if not connection.scalar(
+                text("SELECT 1 FROM pg_database WHERE datname=:name"), {"name": url.database}
+            ):
+                quoted = connection.dialect.identifier_preparer.quote(url.database)
+                connection.execute(text(f"CREATE DATABASE {quoted}"))
+    except OperationalError:
+        raise RuntimeError(
+            "StudySpot test database is unavailable. Start Docker and the db service, then check TEST_DATABASE_URL."
+        ) from None
+    finally:
+        admin.dispose()

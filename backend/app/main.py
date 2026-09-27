@@ -25,8 +25,8 @@ def create_app():
     settings = get_settings()
     app = FastAPI(
         title="StudySpot API",
-        version="0.2.0",
-        description="Persistent campus data foundation. Development identity is NOT authentication. Seed forecasts are NOT ML output.",
+        version="0.3.0",
+        description="Persistent campus data foundation with Supabase-verified sign-in. Seed forecasts are NOT ML output.",
         docs_url="/docs" if settings.app_env != "production" else None,
         redoc_url="/redoc" if settings.app_env != "production" else None,
         lifespan=lifespan,
@@ -36,7 +36,7 @@ def create_app():
         allow_origins=settings.cors_origins,
         allow_credentials=False,
         allow_methods=["GET", "POST", "PATCH", "DELETE"],
-        allow_headers=["Content-Type"],
+        allow_headers=["Content-Type", "Authorization"],
     )
     register_handlers(app)
     app.include_router(router, prefix=settings.api_v1_prefix)

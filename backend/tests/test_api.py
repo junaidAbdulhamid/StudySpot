@@ -4,7 +4,7 @@ import pytest
 from sqlalchemy import event, func, select, text
 from sqlalchemy.exc import IntegrityError
 
-from app.core.config import Settings, get_settings
+from app.core.config import Settings
 from app.models import (
     Favorite,
     OccupancyEstimate,
@@ -17,7 +17,7 @@ from app.seed.run import seed
 from app.utils.occupancy import classify_occupancy
 
 API = "/api/v1"
-USER = f"{API}/users/dev-studyspot"
+USER = f"{API}/me"
 
 
 def test_health_docs(client):
@@ -118,6 +118,24 @@ def test_invalid_query(client, query):
     assert response.json()["error"]["code"] == "VALIDATION_ERROR"
 
 
+def test_get_me(client):
+    data = client.get(USER).json()["data"]
+    assert data["id"] == "dev-studyspot"
+    assert data["email"] == "dev@studyspot.local"
+    assert data["display_name"] == "Alex Morgan"
+
+
+def test_update_me(client):
+    updated = client.patch(USER, json={"display_name": "New Name"})
+    assert updated.status_code == 200, updated.text
+    assert updated.json()["data"]["display_name"] == "New Name"
+    assert client.get(USER).json()["data"]["display_name"] == "New Name"
+    assert client.patch(USER, json={"display_name": ""}).status_code == 422
+    assert client.patch(USER, json={"display_name": None}).status_code == 422
+    assert client.patch(USER, json={"avatar_url": "not-https"}).status_code == 422
+    assert client.patch(USER, json={"unknown": 1}).status_code == 422
+
+
 def test_favorites(client):
     before = client.get(f"{USER}/favorites").json()["total"]
     one = client.post(f"{USER}/favorites/zone-3")
@@ -128,7 +146,6 @@ def test_favorites(client):
     assert client.delete(f"{USER}/favorites/zone-3").status_code == 204
     assert client.delete(f"{USER}/favorites/zone-3").status_code == 204
     assert client.post(f"{USER}/favorites/missing").status_code == 404
-    assert client.get(f"{API}/users/another-user/favorites").status_code == 403
 
 
 def test_preferences(client):
@@ -304,15 +321,28 @@ def test_classification(percent, expected):
     assert classify_occupancy(percent) == expected
 
 
-def test_development_identity_disabled(client):
-    settings = get_settings()
-    previous = settings.dev_user_enabled
-    try:
-        settings.dev_user_enabled = False
-        assert client.get(f"{API}/users/development").status_code == 403
-        assert client.get(f"{USER}/favorites").status_code == 403
-    finally:
-        settings.dev_user_enabled = previous
+def test_me_requires_bearer_token(anonymous_client):
+    assert anonymous_client.get(USER).status_code == 401
+    assert anonymous_client.get(f"{USER}/favorites").status_code == 401
+    response = anonymous_client.get(USER)
+    assert response.json()["error"]["code"] == "UNAUTHORIZED"
+    assert response.headers["WWW-Authenticate"] == "Bearer"
+
+
+def test_me_rejects_malformed_authorization(anonymous_client):
+    assert anonymous_client.get(USER, headers={"Authorization": "Basic abc"}).status_code == 401
+    huge_token = "a" * 20000
+    assert (
+        anonymous_client.get(USER, headers={"Authorization": f"Bearer {huge_token}"}).status_code
+        == 401
+    )
+
+
+def test_me_returns_503_when_supabase_unconfigured(anonymous_client):
+    # supabase_url defaults to "" in tests; any bearer token then fails closed.
+    response = anonymous_client.get(USER, headers={"Authorization": "Bearer irrelevant-token"})
+    assert response.status_code == 503
+    assert response.json()["error"]["code"] == "AUTH_UNAVAILABLE"
 
 
 def test_production_rejects_demo_identity():
@@ -335,7 +365,7 @@ def test_errors_do_not_expose_exception_details(client, db, monkeypatch):
     assert "secret" not in response.text
 
 
-def test_migration_roundtrip():
+def test_migration_roundtrip(engine):
     import os
     import subprocess
     import sys
@@ -363,7 +393,7 @@ def test_migration_roundtrip():
         engine = create_engine(target, hide_parameters=True)
         with engine.connect() as connection:
             assert connection.scalar(text("SELECT PostGIS_Version()"))
-            assert connection.scalar(text("SELECT version_num FROM alembic_version")) == "0001"
+            assert connection.scalar(text("SELECT version_num FROM alembic_version")) == "0002"
         engine.dispose()
     finally:
         with admin.connect() as connection:

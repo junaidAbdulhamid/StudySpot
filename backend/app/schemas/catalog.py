@@ -176,6 +176,7 @@ class UserRead(ReadModel):
     avatar_url: str | None
     points: int
     reliability_score: float
+    onboarding_completed: bool
 
 
 class PreferenceRead(ReadModel):
@@ -222,7 +223,8 @@ class ErrorEnvelope(BaseModel):
 
 
 _ERROR_DESCRIPTIONS = {
-    403: "Development identity is disabled, or the path user is not the configured development user.",
+    401: "A valid Supabase access token is required.",
+    403: "Access denied.",
     404: "The requested record does not exist.",
     422: "Query parameters or body failed validation.",
     503: "The database or PostGIS is unavailable.",
@@ -235,3 +237,15 @@ def errors(*statuses: int) -> dict[int | str, dict]:
         status: {"model": ErrorEnvelope, "description": _ERROR_DESCRIPTIONS[status]}
         for status in statuses
     }
+
+
+class ProfileUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+    display_name: str | None = Field(default=None, min_length=1, max_length=120)
+    avatar_url: str | None = Field(default=None, max_length=500, pattern=r"^https://")
+
+    @model_validator(mode="after")
+    def nonnull_name(self):
+        if "display_name" in self.model_fields_set and self.display_name is None:
+            raise ValueError("Display name cannot be null")
+        return self

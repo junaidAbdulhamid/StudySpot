@@ -1,30 +1,34 @@
 from typing import Annotated
 
 from fastapi import Depends
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
-from app.core.config import get_settings
+from app.core.auth import VerifiedIdentity, unauthorized, verify_access_token
 from app.core.database import get_db
-from app.core.exceptions import AppError
-from app.services.users import UserService
+from app.models import User
+from app.services.accounts import AccountService
 
 Database = Annotated[Session, Depends(get_db)]
+bearer = HTTPBearer(auto_error=False)
 
 
-def development_user_id(db: Database) -> str:
-    settings = get_settings()
-    if not settings.dev_user_enabled or settings.app_env not in {"development", "test"}:
-        raise AppError("DEVELOPMENT_IDENTITY_DISABLED", "Development identity is disabled.", 403)
-    UserService(db).get(settings.dev_user_id)
-    return settings.dev_user_id
+def get_verified_identity(
+    credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(bearer)],
+) -> VerifiedIdentity:
+    if (
+        credentials is None
+        or credentials.scheme.lower() != "bearer"
+        or len(credentials.credentials) > 16384
+    ):
+        raise unauthorized()
+    return verify_access_token(credentials.credentials)
 
 
-def require_development_user(user_id: str, identity: Annotated[str, Depends(development_user_id)]):
-    if user_id != identity:
-        raise AppError(
-            "USER_ACCESS_DENIED", "Only the configured development user is available.", 403
-        )
-    return identity
+def get_current_user(
+    db: Database, identity: Annotated[VerifiedIdentity, Depends(get_verified_identity)]
+) -> User:
+    return AccountService(db).synchronize(identity)
 
 
-DevUser = Annotated[str, Depends(require_development_user)]
+CurrentUser = Annotated[User, Depends(get_current_user)]

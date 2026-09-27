@@ -15,7 +15,11 @@ class AppError(Exception):
 
 
 def error_response(code: str, message: str, status: int):
-    return JSONResponse(status_code=status, content={"error": {"code": code, "message": message}})
+    return JSONResponse(
+        status_code=status,
+        headers={"WWW-Authenticate": "Bearer"} if status == 401 else None,
+        content={"error": {"code": code, "message": message}},
+    )
 
 
 def register_handlers(app: FastAPI):

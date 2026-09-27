@@ -1,6 +1,7 @@
 from sqlalchemy.orm import Session
 
 from app.core.exceptions import AppError
+from app.models import User
 from app.repositories.users import FavoriteRepository, PreferenceRepository, UserRepository
 from app.schemas.catalog import (
     FavoriteRead,
@@ -77,5 +78,6 @@ class PreferenceService:
             row.preferred_amenities = amenities
         for key, value in values.items():
             setattr(row, key, value)
+        self.db.get(User, user_id).onboarding_completed = True
         self.db.commit()
         return PreferenceRead.model_validate(row)
