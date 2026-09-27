@@ -68,7 +68,9 @@ erDiagram
     }
     USER {
         string id PK
-        string email UK
+        string auth_provider_id UK "nullable; the verified Supabase subject"
+        bool onboarding_completed
+        string email "not unique; refreshed on each sign-in"
         string display_name
         string avatar_url "nullable"
         int points "CHECK >= 0"
@@ -159,9 +161,11 @@ erDiagram
 | `ix_occupancy_predictions_target_time` | Forecast horizon scans |
 | `ix_favorites_user_id`, `ix_favorites_location_id` | Favorites both directions |
 
-Unique constraints do the rest: `campuses.slug`, `amenities.slug`, `users.email`,
-`user_preferences.user_id`, `(campus_id, name)` on buildings, `(building_id, slug)` on locations,
-`(user_id, location_id)` on favorites, `(location_id, target_time, model_version)` on predictions.
+Unique constraints do the rest: `campuses.slug`, `amenities.slug`, `users.auth_provider_id` (nullable —
+migration `0002` replaced the earlier `users.email` uniqueness, since an account is now found by its
+verified Supabase identity, not by email), `user_preferences.user_id`, `(campus_id, name)` on buildings,
+`(building_id, slug)` on locations, `(user_id, location_id)` on favorites, `(location_id, target_time,
+model_version)` on predictions.
 
 ## Occupancy classification
 

@@ -44,7 +44,7 @@ Notes on the choices:
   the local network. Mobile devices talk to the API, never to PostgreSQL.
 - **`platform: linux/amd64`.** The PostGIS image has no arm64 build, so it runs through emulation on
   Apple Silicon. Startup takes a few seconds longer; queries at this data size are unaffected.
-- **Named volume `studyspot_data`.** Data survives `down` but not `down -v`. Since everything is
-  reproducible from `alembic upgrade head` plus the seed, deleting the volume is always safe.
+- **Named volume `studyspot_data`.** Data survives `down` but not `down -v`. Deleting this volume removes saved favorites, preferences, and all other database data.
+  Migrations and seed can recreate the demo catalog, but cannot recover user changes.
 - **Healthcheck.** `pg_isready` gates the container as healthy, which is what the test harness and
   compose dependents wait on.

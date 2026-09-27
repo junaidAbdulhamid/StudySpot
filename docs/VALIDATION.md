@@ -1,8 +1,66 @@
 # Validation
 
+## Phase 3 — Supabase authentication
+
+Executed September 27, 2026, continuing a session Codex left mid-implementation (see
+`.handoff/JUNAID_REPORT.md` for the full account). Same tool versions as Phase 2 below, plus Expo
+57.0.25 with the mobile dependencies Codex had already added (`@supabase/supabase-js`,
+`expo-secure-store`, `expo-web-browser`, `expo-auth-session`).
+
+| Check | Command | Result |
+| --- | --- | --- |
+| Backend lint | `ruff check .` | Passed |
+| Backend format | `ruff format --check .` | Passed |
+| Backend tests | `pytest -q` | Passed, 68 tests (was 49; +19 for `/me` routes and the new `app/core/auth.py` / `app/services/accounts.py`) |
+| Schema drift | `alembic check` after `alembic upgrade head` | "No new upgrade operations detected" against migration `0002` |
+| Mobile typecheck | `npm run typecheck` | Passed |
+| Mobile lint | `npm run lint` | Passed (1 pre-existing warning, unrelated to auth, in `AppStore.tsx`) |
+| Mobile format | `npm run format:check` | Passed |
+| Mobile tests | `npm test` | Passed, 16 tests (unchanged) |
+| Bundles | `npx expo export --platform all` | Passed; web, iOS and Android bundles all built |
+| Browser smoke | Playwright against `expo start --web`, no configured Supabase project | Onboarding → login → email/sign-up/forgot-password screens all render without console or page errors; "Continue with Mason/Apple" and "Send Reset Link" surface "Sign-in needs Supabase configuration" rather than crashing |
+| Browser journeys | `npm run test:e2e` | **Not run — see limitation below** |
+
+### What changed
+
+- `backend/app/core/auth.py`, `backend/app/services/accounts.py`, and migration `0002` were already
+  written by Codex and are unchanged. `backend/tests/conftest.py` now authenticates the `client` fixture
+  as the seeded dev user via `app.dependency_overrides[get_current_user]` — the standard FastAPI pattern
+  for testing routes behind a real third-party identity provider — and adds an `anonymous_client` fixture
+  (no override) for testing real 401/503 behavior.
+- `backend/tests/test_api.py` was updated from the old `/users/{id}/...` paths (removed by Codex's own
+  route changes) to `/me/...`, and gained `test_get_me`/`test_update_me`. The obsolete
+  development-identity 403 test was replaced with token-based 401/503 tests.
+- `backend/tests/test_auth.py` is new: unit coverage for `verify_access_token` (missing config, network
+  failure, 401/403/500 upstream, malformed/anonymous identity, display-name fallback) and
+  `AccountService` (creation, email-refresh-without-overwriting-display-name, idempotent preference
+  creation, cascading deletion) — this code had zero coverage before.
+- Mobile: `app/(auth)/login.tsx` was rewritten to call real `useAuth().oauth()` instead of a removed
+  `useApp().login()` demo stub (this previously failed `tsc`). Added the four screens `(auth)/_layout.tsx`
+  referenced but that didn't exist yet: `(auth)/email.tsx`, `(auth)/forgot-password.tsx`,
+  `(auth)/reset-password.tsx`, `auth/callback.tsx` — plus `edit-profile.tsx`, linked from a new tap target
+  on the profile card, backing the `updateProfile` action Codex had already wired into `AppStore`. Added
+  a shared `TextField` to `components/common/index.tsx` for all of these. Fixed one pre-existing
+  `react-hooks/set-state-in-effect` lint error in `AuthProvider.tsx` (session bootstrap split so the
+  effect's synchronous body no longer reaches a `setState` call before its first `await`).
+- `backend/.env.example` and `mobile/.env.example` document the new `SUPABASE_URL`/`SUPABASE_ANON_KEY`
+  and `EXPO_PUBLIC_SUPABASE_URL`/`EXPO_PUBLIC_SUPABASE_ANON_KEY` variables. `backend/README.md` and the
+  root `README.md` describe the new `/me` endpoints and setup steps in place of the removed
+  development-identity routes.
+
+### Limitation: browser journeys need a real Supabase project
+
+`mobile/tests/e2e/demo.spec.ts` predates this work and drives the demo login button and the removed
+`/users/{id}` endpoints directly. It cannot be fixed by editing paths alone: the actual sign-in step now
+goes through Supabase's hosted OAuth (Google/Apple) or email/password, and there is no configured
+Supabase project in this environment to sign into, nor a way to fabricate one safely. This is a
+prerequisite the project owner needs to provide (a Supabase project, plus a seeded test account with
+known credentials for the email/password path Playwright can actually automate) — see
+`.handoff/JUNAID_REPORT.md` for the specific next step.
+
 ## Phase 2 — backend and API integration
 
-Executed September 26, 2026 on macOS with Python 3.12.14, FastAPI 0.141.1, SQLAlchemy 2.0.54,
+Executed September 26–27, 2026 on macOS with Python 3.12.14, FastAPI 0.141.1, SQLAlchemy 2.0.54,
 Pydantic 2.13.5, Alembic 1.20.0, GeoAlchemy2 0.20.0, uv 0.12.9, ruff 0.16.9, PostgreSQL 17.5 with
 PostGIS 3.5 (Docker), Node 26.7.0 and npm 11.19.0.
 
@@ -21,7 +79,7 @@ PostGIS 3.5 (Docker), Node 26.7.0 and npm 11.19.0.
 | Mobile lint | `npm run lint` | Passed |
 | Mobile format | `npm run format:check` | Passed |
 | Mobile tests | `npm test` | Passed, 16 logic and API-client tests |
-| Browser journeys | `npm run test:e2e` | Passed, 3 journeys in Chrome (27.3s) against a seeded `_test` database |
+| Browser journeys | `npm run test:e2e` | Passed, 5 journeys in Chrome (29.6s) against a seeded `_test` database |
 | Dependency check | `npx expo install --check` | Dependencies up to date |
 | Expo Doctor | `npx expo-doctor` | 21/21 checks passed |
 | Bundles | `npx expo export --platform all` | Passed; iOS 4.3MB and Android 4.4MB Hermes bundles, 2.6MB web bundle |
@@ -71,10 +129,18 @@ finish: container → migrations → seed → uvicorn → `expo start --web` →
 
 Screenshots were inspected at 390 × 844; the Phase 1 dark forest design is unchanged.
 
-The three Playwright journeys (onboarding, search/filtering, predictions, check-in and check-out,
+The five Playwright journeys (onboarding, search/filtering, predictions, check-in and check-out,
 reporting, recommendations, favorites, map selection, alerts, preference editing, settings, and a
-320px viewport) run against port 8002 backed by the `_test` database, so they never disturb
+320px viewport, plus API error/retry, optimistic-favorite rollback, failed preference saves, and malformed response recovery) run against port 8002 backed by the `_test` database, so they never disturb
 development favorites or preferences.
+
+### Final recovery checks
+
+The September 27 continuation initially found Docker Desktop stopped. Database-dependent tests failed on connection refusal; those runs are not counted as passing. After restarting Docker and the dedicated database, all 49 backend tests and all five browser journeys passed. Test startup now exits with a short actionable message if PostgreSQL is unavailable; short pytest tracebacks avoid dumping connection internals.
+
+The browser recovery cases inject 503/500 responses and malformed JSON shapes, verify the visible error, retry successfully, and inspect backend favorites/preferences to confirm persistence and rollback. The initial added assertions matched hidden screens retained by navigation; assertions now target the active accessible alert.
+
+The backend suite emits one upstream Starlette warning that its current HTTPX test-client integration is deprecated. Tests pass; this does not affect the running API.
 
 ### Phase 2 limitations
 
