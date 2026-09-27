@@ -52,6 +52,9 @@ test("complete demo journey", async ({ page }) => {
   await page.getByRole("button", { name: "Next", exact: true }).click();
   await page.getByRole("button", { name: "Next", exact: true }).click();
   await page.getByRole("button", { name: "Finish", exact: true }).click();
+  await expect(
+    page.getByRole("button", { name: /^View .*Floor/ }).first(),
+  ).toBeVisible();
   await page.screenshot({ path: "test-results/home.png", fullPage: true });
   await page.getByRole("tab", { name: "Explore" }).click();
   await page.getByRole("textbox").fill("Fenwick");
@@ -222,4 +225,139 @@ test("preference editing, check-out, recents, home search, and settings", async 
     await page.getByRole("button", { name, exact: true }).click();
   await page.getByRole("button", { name: "Find My Spot", exact: true }).click();
   await expect(page.getByText("Let’s give you more options")).toBeVisible();
+});
+
+test("remote errors retry and favorite mutations roll back without losing server state", async ({
+  page,
+  request,
+}) => {
+  await enter(page);
+  const listPattern = "**/api/v1/locations?**";
+  await page.route(listPattern, (route) =>
+    route.fulfill({
+      status: 503,
+      json: {
+        error: {
+          code: "DATABASE_UNAVAILABLE",
+          message: "Data is temporarily unavailable. Please retry.",
+        },
+      },
+    }),
+  );
+  await page.getByRole("tab", { name: "Explore" }).click();
+  await expect(
+    page.getByText("Data is temporarily unavailable. Please retry."),
+  ).toBeVisible();
+  await page.unroute(listPattern);
+  await page.getByRole("button", { name: "Try again", exact: true }).click();
+  await expect(page.getByText("12 study spaces · Seed data")).toBeVisible();
+  await page.getByRole("textbox").fill("floor 4");
+  await page
+    .getByRole("button", { name: "View Fenwick Library, Floor 4", exact: true })
+    .click();
+  const favoritesPattern = "**/api/v1/users/*/favorites/zone-1";
+  await page.route(favoritesPattern, (route) =>
+    route.fulfill({
+      status: 503,
+      json: {
+        error: {
+          code: "DATABASE_UNAVAILABLE",
+          message: "Data is temporarily unavailable. Please retry.",
+        },
+      },
+    }),
+  );
+  await page
+    .getByRole("button", { name: "Remove from favorites", exact: true })
+    .click();
+  await expect(
+    page.getByRole("alert").getByText(/Favorite not saved/),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Remove from favorites", exact: true }),
+  ).toBeEnabled();
+  const { data: user } = await (
+    await request.get(`${api}/users/development`)
+  ).json();
+  const saved = await (
+    await request.get(`${api}/users/${user.id}/favorites`)
+  ).json();
+  expect(
+    saved.items.some(
+      (item: { location_id: string }) => item.location_id === "zone-1",
+    ),
+  ).toBeTruthy();
+  await page.unroute(favoritesPattern);
+  await page.getByRole("button", { name: "Dismiss", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Remove from favorites", exact: true })
+    .click();
+  await expect(
+    page.getByRole("button", { name: "Save to favorites", exact: true }),
+  ).toBeEnabled();
+  const confirmed = await (
+    await request.get(`${api}/users/${user.id}/favorites`)
+  ).json();
+  expect(
+    confirmed.items.some(
+      (item: { location_id: string }) => item.location_id === "zone-1",
+    ),
+  ).toBeFalsy();
+});
+
+test("failed preference saves stay editable and malformed location data is recoverable", async ({
+  page,
+  request,
+}) => {
+  await enter(page);
+  await page.getByRole("tab", { name: "Profile" }).click();
+  await page
+    .getByRole("button", { name: "Study Preferences", exact: true })
+    .click();
+  await page.getByRole("button", { name: "Moderate", exact: true }).click();
+  for (let i = 0; i < 3; i++)
+    await page.getByRole("button", { name: "Next", exact: true }).click();
+  const pattern = "**/api/v1/users/*/preferences";
+  await page.route(pattern, (route) =>
+    route.fulfill({
+      status: 500,
+      json: {
+        error: {
+          code: "INTERNAL_ERROR",
+          message: "Save unavailable. Please retry.",
+        },
+      },
+    }),
+  );
+  await page.getByRole("button", { name: "Finish", exact: true }).click();
+  await expect(
+    page.getByRole("alert").getByText("Save unavailable. Please retry."),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Finish", exact: true }),
+  ).toBeEnabled();
+  await page.unroute(pattern);
+  await page.getByRole("button", { name: "Finish", exact: true }).click();
+  await expect(page.getByText("Your study rhythm")).toBeVisible();
+  const { data: user } = await (
+    await request.get(`${api}/users/development`)
+  ).json();
+  const preference = await (
+    await request.get(`${api}/users/${user.id}/preferences`)
+  ).json();
+  expect(preference.data.noise_preference).toBe("moderate");
+  await page.getByRole("tab", { name: "Explore" }).click();
+  const locationPattern = "**/api/v1/locations/zone-1";
+  await page.route(locationPattern, (route) =>
+    route.fulfill({ status: 200, json: { data: { id: "zone-1" } } }),
+  );
+  await page
+    .getByRole("button", { name: "View Fenwick Library, Floor 4", exact: true })
+    .click();
+  await expect(
+    page.getByText("The server returned unexpected data. Please retry."),
+  ).toBeVisible();
+  await page.unroute(locationPattern);
+  await page.getByRole("button", { name: "Try again", exact: true }).click();
+  await expect(page.getByText("CURRENT OCCUPANCY")).toBeVisible();
 });
