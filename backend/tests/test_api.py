@@ -4,7 +4,7 @@ import pytest
 from sqlalchemy import event, func, select, text
 from sqlalchemy.exc import IntegrityError
 
-from app.core.config import Settings
+from app.core.config import Settings, get_settings
 from app.models import (
     Favorite,
     OccupancyEstimate,
@@ -348,8 +348,15 @@ def test_me_rejects_malformed_authorization(anonymous_client):
     )
 
 
-def test_me_returns_503_when_supabase_unconfigured(anonymous_client):
-    # supabase_url defaults to "" in tests; any bearer token then fails closed.
+def test_me_returns_503_when_supabase_unconfigured(anonymous_client, monkeypatch):
+    # A real Supabase project may be configured in .env for local development;
+    # force the unconfigured case explicitly so this test doesn't depend on it.
+    from app.core import auth as auth_module
+
+    unconfigured = Settings(
+        supabase_url="", supabase_anon_key="", database_url=get_settings().database_url
+    )
+    monkeypatch.setattr(auth_module, "get_settings", lambda: unconfigured)
     response = anonymous_client.get(USER, headers={"Authorization": "Bearer irrelevant-token"})
     assert response.status_code == 503
     assert response.json()["error"]["code"] == "AUTH_UNAVAILABLE"
