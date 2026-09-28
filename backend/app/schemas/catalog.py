@@ -142,6 +142,10 @@ class LocationDetail(LocationListItem):
     updated_at: datetime
 
 
+class NearbyLocation(LocationListItem):
+    distance_meters: float = Field(ge=0)
+
+
 LocationRead = LocationDetail
 
 
@@ -167,6 +171,13 @@ class LocationQuery(Pagination):
         if self.min_occupancy > self.max_occupancy:
             raise ValueError("min_occupancy must be <= max_occupancy")
         return self
+
+
+class NearbyQuery(LocationQuery):
+    latitude: float = Field(ge=-90, le=90, allow_inf_nan=False)
+    longitude: float = Field(ge=-180, le=180, allow_inf_nan=False)
+    radius_meters: float = Field(default=1500, gt=0, le=10000, allow_inf_nan=False)
+    limit: int = Field(default=20, ge=1, le=100)
 
 
 class UserRead(ReadModel):

@@ -8,6 +8,8 @@ from app.schemas.catalog import (
     LocationDetail,
     LocationListItem,
     LocationQuery,
+    NearbyLocation,
+    NearbyQuery,
     Page,
     errors,
 )
@@ -25,6 +27,12 @@ router = APIRouter(prefix="/locations", tags=["locations"])
 )
 def list_locations(db: Database, filters: Annotated[LocationQuery, Query()]):
     return LocationService(db).list(filters)
+
+
+@router.get("/nearby", response_model=Data[list[NearbyLocation]], responses=errors(422, 503))
+def nearby_locations(db: Database, filters: Annotated[NearbyQuery, Query()]):
+    """Distance is geodesic meters, not a walking route. Coordinates are not stored."""
+    return {"data": LocationService(db).nearby(filters)}
 
 
 @router.get(

@@ -1,5 +1,7 @@
+import logging
 from collections import defaultdict
 from datetime import UTC, datetime
+from time import perf_counter
 
 from sqlalchemy.orm import Session
 
@@ -19,6 +21,7 @@ from app.schemas.catalog import (
     LocationDetail,
     LocationListItem,
     LocationQuery,
+    NearbyLocation,
     ObservationRead,
     OccupancyEstimateRead,
     Page,
@@ -138,6 +141,22 @@ class LocationService:
             page_size=filters.page_size,
             total=total,
         )
+
+    def nearby(self, filters):
+        started = perf_counter()
+        now = datetime.now(UTC)
+        rows = self.repo.find_nearby(filters, now)
+        locations = self.assemble([row[0] for row in rows], now)
+        logging.getLogger("studyspot").info(
+            "nearby_query duration_ms=%.1f result_count=%s radius_category=%s",
+            (perf_counter() - started) * 1000,
+            len(rows),
+            "local" if filters.radius_meters <= 1500 else "wide",
+        )
+        return [
+            NearbyLocation(**location.model_dump(), distance_meters=row[1])
+            for location, row in zip(locations, rows, strict=True)
+        ]
 
     def get(self, identifier):
         return self.assemble([self.require(identifier)], datetime.now(UTC))[0]

@@ -1,5 +1,6 @@
 from datetime import UTC, datetime, timedelta
 
+from geoalchemy2 import Geography
 from sqlalchemy import Time, and_, cast, func, or_, select
 from sqlalchemy.orm import Session, joinedload, selectinload
 
@@ -71,7 +72,7 @@ class LocationRepository:
             .options(*self.options())
         )
 
-    def list(self, filters: LocationQuery, now: datetime):
+    def filtered_query(self, filters: LocationQuery, now: datetime):
         latest = (
             select(OccupancyEstimate.occupancy_percent)
             .where(
@@ -127,6 +128,26 @@ class LocationRepository:
                 ),
             )
             query = query.where(is_open if filters.open_now else ~is_open)
+        return query
+
+    def find_nearby(self, filters, now):
+        origin = cast(
+            func.ST_SetSRID(func.ST_MakePoint(filters.longitude, filters.latitude), 4326),
+            Geography(geometry_type="POINT", srid=4326),
+        )
+        distance = func.ST_Distance(StudyLocation.geo_point, origin).label("distance_meters")
+        query = self.filtered_query(filters, now).where(
+            func.ST_DWithin(StudyLocation.geo_point, origin, filters.radius_meters)
+        )
+        return self.db.execute(
+            query.add_columns(distance)
+            .options(*self.options())
+            .order_by(distance, StudyLocation.id)
+            .limit(filters.limit)
+        ).all()
+
+    def list(self, filters: LocationQuery, now: datetime):
+        query = self.filtered_query(filters, now)
         total = self.db.scalar(select(func.count()).select_from(query.subquery()))
         rows = self.db.scalars(
             query.options(*self.options())
