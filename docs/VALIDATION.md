@@ -1,5 +1,46 @@
 # Validation
 
+## Phase 4 — foreground geospatial discovery
+
+Executed September 27, 2026. This section records Phase 4; earlier sections are historical.
+
+| Check | Command | Result |
+| --- | --- | --- |
+| Backend lint/format | `ruff check .`; `ruff format --check .` | Passed; 50 files formatted |
+| Backend tests | `DEBUG=false .venv/bin/pytest -q` | 84 passed, one upstream Starlette/httpx deprecation warning (9.34s) |
+| Migrations/schema | `alembic upgrade head`; `alembic check` | Passed; no new upgrade operations, existing `0002` head |
+| Mobile TypeScript | `npm run typecheck` | Passed |
+| Mobile lint/format | `npm run lint`; `npm run format:check` | Passed |
+| Mobile unit tests | `npm test` | 29 passed |
+| Browser journeys | `npm run test:e2e` | 6 passed (24.9s), including foreground grant, denial, shared filters, floor/details selection and intercepted external walking-directions URL |
+| Expo compatibility | `npx expo-doctor` | 21/21 checks passed |
+| Bundling | `npx expo export --platform all` | Web, iOS and Android exported successfully |
+| Native plugins | `npx expo config --type introspect --json` | Foreground iOS description and Android coarse/fine permissions; no location background mode or background/foreground-service permission |
+| Native generation | `npx expo prebuild --no-install` | iOS and Android projects generated successfully; generated directories ignored |
+| Manual API smoke check | Start Uvicorn on 8001; request nearby at 38.8315/-77.3075, radius 1500, limit 3 | HTTP 200: zone-8 55.506 m, zone-10 and zone-9 89.625 m; access log contained the path without coordinate query parameters |
+
+The new backend tests verify geodesic ordering, deterministic ties, radius filtering, known points near
+111.31949 m at the equator, boundary inclusion/exclusion, numeric/radius/limit validation, combined
+catalog filters, no-results behavior, spatial index presence, and no coordinate fields on accounts.
+The access-log test verifies that precise coordinate query strings are removed. Query timing logs
+contain only elapsed milliseconds, result count and a broad radius category.
+
+Mobile logic tests cover explicit foreground permission, denial/unavailable GPS, two-minute cache,
+expiry and late-result suppression, geodesic formatting, campus-timezone overnight hours, real route
+caching/fallback and floor grouping. Browser tests use injected coordinates and a deliberately blank
+map token. Building selectors exercise preview/navigation while the missing-token state is visible;
+they **do not verify Mapbox tiles, GPU rendering, native markers or actual device GPS**.
+
+Native compilation was not performed: CocoaPods is unavailable in this environment. A public Mapbox
+token is still needed for live map/routing QA. Test simulator/device recenter, OS Settings/revocation,
+poor indoor accuracy, native Apple/Google Maps handoff and real provider failures using
+[the geospatial guide](geospatial.md). No real OAuth provider or production Supabase account was used
+by these tests. npm reports 14 moderate dependency advisories; no forced SDK downgrade was applied.
+
+Initial new browser checks exposed an invalid selected-state assertion and an overly broad text
+locator; selected chips now expose `aria-pressed`, and the detail assertion waits for navigation and
+checks visible text. One intermediate run lost its test servers; the full final suite passed afterwards.
+
 ## Phase 3 — Supabase authentication
 
 Executed September 27, 2026, continuing a session Codex left mid-implementation (see

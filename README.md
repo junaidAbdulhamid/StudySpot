@@ -10,9 +10,15 @@ study style.
 - **Phase 3** replaced the development identity with real sign-in: Supabase Auth issues the session,
   the mobile app carries it as a bearer token, and the API verifies it against Supabase on every request
   before touching `/me` or its sub-routes.
+- **Phase 4** replaced the schematic map and fake walking minutes with real geolocation: foreground-only
+  device location, a PostGIS-backed `/locations/nearby` search, an interactive Mapbox map, and honest
+  distance labels that never claim a walking time StudySpot has not actually measured.
 
 All occupancy figures and forecasts are persisted **development seed data** — not live George Mason
 occupancy and not machine-learning output. Alerts remain local demo fixtures.
+
+Phase 4 implementation details, executed checks and remaining provider/device acceptance are recorded
+in [the Phase 4 report](docs/phase4-report.md).
 
 ```text
 React Native screen → mobile service → API client → HTTP
@@ -50,6 +56,24 @@ Sign-in needs a Supabase project: create one at [supabase.com](https://supabase.
 [the authentication setup guide](docs/authentication.md) for Google, bundle identifiers, and provider
 callback URLs. Without these variables the app still starts and the login screen still renders, but
 every sign-in button fails with "Sign-in needs Supabase configuration."
+
+The map needs a Mapbox public token: create one at [mapbox.com](https://www.mapbox.com) (a `pk.*`
+token — never a secret/download token) and set `EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN` in `mobile/.env`.
+Without it, the Map tab shows a clear "map setup required" message and every other screen (including
+nearby search, distances, and Directions) keeps working normally.
+
+**`@rnmapbox/maps` is a native module and does not run in Expo Go.** Use a development build instead:
+
+```sh
+cd mobile
+npx expo prebuild            # generates ios/ and android/ for the native map module
+npx expo run:ios             # or: npx expo run:android
+```
+
+Use `npx expo start --dev-client` after installing the native build. Expo Go is unsupported for this
+app because routes import the native map module. The web preview (`npm run web`) uses `mapbox-gl`
+and needs no native build. See [docs/geospatial.md](docs/geospatial.md) for foreground permission
+behavior, simulator/emulator location injection, physical-device setup, distance semantics and provider privacy.
 
 Start the app at onboarding, sign in or create an account, and finish the preference wizard. Logging out
 clears session check-ins, reports and recent locations; favorites and preferences live in the database
@@ -95,10 +119,12 @@ mobile/
   components/          Common UI, location cards, occupancy charts, map, match scores
   theme/               Semantic colors, spacing, radii, typography
   types/               Domain contracts shared by services and UI
-  services/            Location, recommendation, user, favorite and alert boundaries
+  services/            Location, campus, recommendation, user, favorite and alert boundaries
   services/api/        Typed HTTP client, response DTOs, DTO → domain mappers
   services/auth/       Supabase client, secure token storage, the auth/API bridge
-  store/               AuthProvider (Supabase session), AppStore (API hydration, optimistic favorites)
+  services/location/   Device GPS adapter, Mapbox walking-route provider, native-maps deep link
+  store/               AuthProvider (Supabase session), AppStore (API hydration, optimistic favorites),
+                       LocationProvider (foreground GPS), DiscoveryProvider (shared map/list filters)
   hooks/               Async loading/error/retry lifecycle, location lookup, debounce
   utils/               Occupancy, search/filtering, deterministic recommendation ranking
   mocks/               Phase 1 dataset: seed source of truth and test fixture only
@@ -126,19 +152,26 @@ relay/                 Existing repository tooling, preserved
   preferences, demo check-ins/reports and notification settings — and reloads it whenever the signed-in
   user changes. Favorites and preferences are written through the API — a favorite updates the UI
   immediately, then rolls back with a visible error if the request fails. AsyncStorage now holds only the
-  device notification setting and the "seen onboarding" flag; it is no longer a data source for favorites
+  device notification setting, location-prompt dismissal and the "seen onboarding" flag; it is no longer a data source for favorites
   or preferences. Old Phase 1 local favorites/preferences are not imported automatically; the database is
   authoritative per account.
 - Occupancy classification and its thresholds are centralized and mirror the backend exactly; labels
   always accompany colors. Unknown occupancy renders as unknown, never as an empty room.
 - Recommendations enforce must-have amenities as hard constraints, then score current and forecast
   occupancy, noise and study style. Ranking lives in `mobile/utils/recommendations.ts`, not in screens.
-- **No walking distances are shown.** Phase 1 displayed illustrative minutes; because the backend has no
-  user location, distance now reads "Distance unavailable" and contributes nothing to ranking. Real
-  proximity arrives with Phase 4 geospatial search.
-- The map is a deliberately schematic React Native component with selectable crowd markers and a
-  preview, populated from backend location records. Positions remain schematic. It uses no map credentials or GPS; `CampusMapProps` is
-  the replacement boundary for a native provider.
+- **Distance is real, walking time is honest.** `LocationProvider` requests foreground-only permission
+  (no background tracking, no location history) and holds a short-lived (2-minute) cached position.
+  When it is available, Home, Explore and Map call `GET /locations/nearby`, which orders results by
+  real PostGIS geodesic distance. `distanceLabel()` renders that as straight-line meters/km — it never
+  invents a walking time. `directions/[id].tsx` optionally asks Mapbox's Directions API for an actual
+  walking route (cached briefly, capped at 8s, silently falls back to the straight-line distance on any
+  failure); only a route that Mapbox actually returned is shown as "N min walk." Without location
+  permission, screens fall back to the paginated `/locations` list and disable proximity sorting rather
+  than fabricate a distance.
+- The Map tab is a real interactive Mapbox map (native via `@rnmapbox/maps`, web via `mapbox-gl`)
+  behind a single `CampusMapProps` boundary, still using the dark forest style. Markers group by
+  building, color by the shared occupancy thresholds, and open a bottom preview card that links to
+  Location Details. A recenter control returns to the user's current position.
 - Reanimated adds reduced-motion-aware onboarding fades and favorite feedback. Safe area insets, scroll
   views, wrapping and FlatLists support phone layouts down to 320px.
 - Photos are bundled for offline use and are illustrative, not verified GMU photography. Sources are in
@@ -155,7 +188,8 @@ endpoint list, environment variables, migration and test commands.
 PostgreSQL 17 + PostGIS 3.5, created entirely by Alembic revision `0001`. Campus → Building → Study
 location, study locations ↔ amenities, three occupancy tables (estimates, observations, predictions),
 and users with preferences and favorites. Each study location carries a generated
-`geography(POINT, 4326)` column with a GiST index, so Phase 4 radius search has nothing to backfill.
+`geography(POINT, 4326)` column with a GiST index; `GET /locations/nearby` filters with `ST_DWithin`
+and orders with `ST_Distance` against it directly — no in-Python distance filtering.
 
 The ER diagram, constraints, indexes, thresholds and seed counts are in
 [docs/database.md](docs/database.md).
@@ -183,12 +217,14 @@ incompatible SDK.
 ## Scope and next phases
 
 Intentionally still mocked or absent: crowd reports and check-ins (local session state), alerts (client
-fixtures), walking distance and proximity search, forecasting models, Redis, push delivery, analytics,
-and production infrastructure. Account deletion has a service-layer primitive
-(`AccountService.delete_application_data`) but no route yet, since deleting the local row without also
-revoking the Supabase identity would let a deleted account silently recreate itself on next sign-in.
+fixtures), forecasting models, Redis, push delivery, analytics, and production infrastructure. Walking
+*routes* depend on a configured Mapbox token and fall back to straight-line distance when it is absent,
+rate-limited, or fails — this is a documented fallback, not a gap. Account deletion has a service-layer
+primitive (`AccountService.delete_application_data`) but no route yet, since deleting the local row
+without also revoking the Supabase identity would let a deleted account silently recreate itself on next
+sign-in. Marker clustering was intentionally skipped at the current ~12-location GMU scale; `mapModel.ts`
+already groups markers by building, which is the first step if clustering is needed later.
 
-Prepared for what comes next: Phase 4 has coordinates, generated geography points and a spatial index
-already in place. Phase 5 has `occupancy_observations` and the `crowd_report` source value waiting for
-real submissions. Phase 7 writes into `occupancy_predictions` alongside a real `model_version`, and the
-mobile prediction screen already reads whatever is persisted there.
+Prepared for what comes next: Phase 5 has `occupancy_observations` and the `crowd_report` source value
+waiting for real submissions. Phase 7 writes into `occupancy_predictions` alongside a real
+`model_version`, and the mobile prediction screen already reads whatever is persisted there.
