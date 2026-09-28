@@ -26,6 +26,7 @@ export default defineConfig({
         EXPO_PUBLIC_API_URL: "http://127.0.0.1:8002/api/v1",
         EXPO_PUBLIC_SUPABASE_URL: "http://127.0.0.1:8002/test-auth",
         EXPO_PUBLIC_SUPABASE_ANON_KEY: "e2e-public-key",
+        EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN: "",
       },
     },
   ],

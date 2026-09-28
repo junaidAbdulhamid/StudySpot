@@ -63,8 +63,11 @@ export default function Settings() {
           </Copy>
           <Copy muted>
             Passwords are handled by Supabase and are never sent to StudySpot.
-            StudySpot does not request GPS access, collect movement history, or
-            send authentication data to analytics. Clearing app data does not
+            Foreground location is optional. Coordinates stay briefly in memory
+            and are sent to StudySpot for nearby search, without being saved to
+            your account. Maps and optional walking routes use Mapbox; that
+            provider receives map requests and route endpoints. There is no
+            background tracking or movement history. Clearing app data does not
             delete server preferences or favorites.
           </Copy>
         </Card>
@@ -78,10 +81,10 @@ export default function Settings() {
             FastAPI.
           </Copy>
           <Copy muted>
-            Live crowdsourcing, real maps, and trained forecasts are planned for
-            future phases.
+            Live crowdsourcing and trained forecasts are planned for future
+            phases.
           </Copy>
-          <Chip label="VERSION 0.3 · PHASE 3" />
+          <Chip label="VERSION 0.4 · PHASE 4" />
         </Card>
       )}
     </Screen>

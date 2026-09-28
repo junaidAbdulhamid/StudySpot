@@ -39,6 +39,110 @@ async function openFenwick(page: Page) {
     .click();
 }
 
+test("foreground nearby discovery, shared filters, floor preview and directions", async ({
+  page,
+  context,
+}) => {
+  await context.grantPermissions(["geolocation"]);
+  await context.setGeolocation({
+    latitude: 38.8315,
+    longitude: -77.3075,
+    accuracy: 20,
+  });
+  await signIn(page, "alex@example.edu");
+  const nearby = page.waitForResponse(
+    (response) =>
+      response.url().includes("/locations/nearby?") &&
+      response.status() === 200,
+  );
+  await page
+    .getByRole("button", { name: "Enable Location", exact: true })
+    .click();
+  const response = await nearby;
+  const rows = (await response.json()).data;
+  expect(rows.length).toBeGreaterThan(0);
+  expect(rows[0].distance_meters).toBeLessThanOrEqual(
+    rows.at(-1).distance_meters,
+  );
+  await expect(
+    page.getByText("Study spots near you", { exact: true }),
+  ).toBeVisible();
+  await page.getByRole("tab", { name: "Explore" }).click();
+  await page.getByRole("button", { name: "Nearest", exact: true }).click();
+  await page.getByRole("button", { name: "Noise ⌄", exact: true }).click();
+  await page.getByRole("button", { name: "Quiet", exact: true }).click();
+  await page.getByRole("button", { name: "Show study spaces" }).click();
+  await page.getByRole("button", { name: "Amenities ⌄", exact: true }).click();
+  await page.getByRole("button", { name: "Outlets", exact: true }).click();
+  await page.getByRole("button", { name: "Show study spaces" }).click();
+  await page.getByRole("tab", { name: "Map" }).click();
+  await expect(page.getByRole("button", { name: "Noise ⌄" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  await page
+    .getByRole("button", { name: "Fenwick Library", exact: true })
+    .click();
+  await page.getByRole("button", { name: "Floor 4", exact: true }).click();
+  await page
+    .getByRole("button", { name: "View Fenwick Library, Floor 4", exact: true })
+    .click();
+  await expect(page).toHaveURL(/\/location\/zone-1/);
+  await expect(
+    page
+      .getByText(/away · straight-line/)
+      .filter({ visible: true })
+      .first(),
+  ).toBeVisible();
+  await page.getByRole("button", { name: /Directions/ }).click();
+  await expect(
+    page.getByRole("button", { name: "Open walking directions" }),
+  ).toBeVisible();
+  await context.route("https://www.google.com/maps/dir/**", (route) =>
+    route.fulfill({
+      contentType: "text/html",
+      body: "External maps test destination",
+    }),
+  );
+  const popup = page.waitForEvent("popup");
+  await page.getByRole("button", { name: "Open walking directions" }).click();
+  const maps = await popup;
+  await expect(maps).toHaveURL(/google\.com\/maps\/dir\/.*travelmode=walking/);
+  await maps.close();
+});
+
+test("denied location keeps campus browsing usable without invented distances", async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator.geolocation, "getCurrentPosition", {
+      value: (
+        _success: unknown,
+        failure: (error: { code: number; message: string }) => void,
+      ) => failure({ code: 1, message: "Permission denied" }),
+    });
+  });
+  await signIn(page, "blair@example.edu");
+  await page
+    .getByRole("button", { name: "Enable Location", exact: true })
+    .click();
+  await expect(
+    page.getByText(/Campus browsing is still available/),
+  ).toBeVisible();
+  await page.getByRole("tab", { name: "Explore" }).click();
+  await expect(
+    page.getByRole("button", { name: "Nearest", exact: true }),
+  ).toHaveCount(0);
+  await expect(page.getByText(/min walk/)).toHaveCount(0);
+  await page.getByRole("textbox").fill("floor 4");
+  await expect(
+    page.getByRole("button", {
+      name: "View Fenwick Library, Floor 4",
+      exact: true,
+    }),
+  ).toBeVisible();
+});
+
 test("fresh account completes onboarding and persists personalization", async ({
   page,
 }) => {

@@ -12,6 +12,8 @@ import { AppProvider, useApp } from "../store/AppStore";
 import { colors } from "../theme";
 import { AuthProvider, useAuth } from "../store/AuthProvider";
 import { LoadingSkeleton, Screen, Copy, Button } from "../components/common";
+import { LocationProvider } from "../store/LocationProvider";
+import { DiscoveryProvider } from "../store/DiscoveryProvider";
 function Navigation() {
   const { ready, signedIn, profileError, reloadProfile, onboardingCompleted } =
     useApp();
@@ -104,7 +106,11 @@ export default function RootLayout() {
         <AuthProvider>
           <AppProvider>
             <StatusBar style="light" />
-            <Navigation />
+            <LocationProvider>
+              <DiscoveryProvider>
+                <Navigation />
+              </DiscoveryProvider>
+            </LocationProvider>
           </AppProvider>
         </AuthProvider>
       </ThemeProvider>

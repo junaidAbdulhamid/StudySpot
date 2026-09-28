@@ -13,6 +13,7 @@ import { Chip, Copy, Icon, styles } from "../common";
 import { OccupancyBadge, OccupancyBar } from "../occupancy";
 import { useApp } from "../../store/AppStore";
 import { formatWalkingDistance } from "../../utils/occupancy";
+import { distanceLabel } from "../../utils/geospatial";
 const images = {
   library: require("../../assets/library.jpg"),
   hall: require("../../assets/hall.jpg"),
@@ -101,8 +102,23 @@ export function AmenityBadge({ amenity }: { amenity: Amenity }) {
     />
   );
 }
-export function DistanceBadge({ minutes }: { minutes: number | null }) {
-  return <Chip label={formatWalkingDistance(minutes)} icon="walk-outline" />;
+export function DistanceBadge({
+  minutes,
+  meters,
+}: {
+  minutes: number | null;
+  meters?: number;
+}) {
+  return (
+    <Chip
+      label={
+        meters != null
+          ? distanceLabel({ distanceMeters: meters })
+          : formatWalkingDistance(minutes)
+      }
+      icon="walk-outline"
+    />
+  );
 }
 export function NoiseBadge({ noise }: { noise: StudyLocation["noiseLevel"] }) {
   return (
@@ -140,8 +156,7 @@ export function LocationCard({
         >
           <Copy variant="heading">{location.name}</Copy>
           <Copy muted variant="caption">
-            {location.floor} · {formatWalkingDistance(location.walkingMinutes)}{" "}
-            · {location.noiseLevel}
+            {location.floor} · {distanceLabel(location)} · {location.noiseLevel}
           </Copy>
           <OccupancyBadge percent={location.currentOccupancy} />
         </Pressable>
@@ -181,7 +196,7 @@ export function LocationCard({
             <View>
               <Copy variant="heading">{location.name}</Copy>
               <Copy variant="caption" muted>
-                GEORGE MASON UNIVERSITY
+                {location.campusName ?? "Campus study space"}
               </Copy>
             </View>
           </LocationImage>
@@ -208,7 +223,7 @@ export function LocationCard({
         >
           <OccupancyBadge percent={location.currentOccupancy} />
           <Copy variant="caption" muted>
-            {formatWalkingDistance(location.walkingMinutes)}
+            {distanceLabel(location)}
           </Copy>
         </View>
         <OccupancyBar percent={location.currentOccupancy} />

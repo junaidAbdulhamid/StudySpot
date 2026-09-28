@@ -24,6 +24,7 @@ import {
   StatCard,
 } from "../../components/occupancy";
 import { LocationBoundary } from "../../components/location/LocationBoundary";
+import { WalkingRouteSummary } from "../../components/location/WalkingRouteSummary";
 import { useLocation } from "../../hooks/useLocation";
 import { useApp } from "../../store/AppStore";
 import { colors as c, radius as r, spacing as s } from "../../theme";
@@ -32,6 +33,7 @@ import {
   getOccupancyLevel,
   formatOccupancy,
 } from "../../utils/occupancy";
+import { isLocationOpen } from "../../utils/geospatial";
 export default function Details() {
   const state = useLocation();
   const { visit } = useApp();
@@ -100,11 +102,15 @@ export default function Details() {
           </Card>
           <View style={[styles.wrap, { marginTop: s.lg }]}>
             <NoiseBadge noise={l.noiseLevel} />
-            <DistanceBadge minutes={l.walkingMinutes} />
+            <DistanceBadge
+              minutes={l.walkingMinutes}
+              meters={l.distanceMeters}
+            />
             {l.amenities.map((a) => (
               <AmenityBadge key={a} amenity={a} />
             ))}
           </View>
+          <WalkingRouteSummary key={l.id} destination={l} />
           <SectionHeader title="A little about this space" />
           <Copy muted>{l.description}</Copy>
           <View style={[styles.row, { marginVertical: s.xl }]}>
@@ -112,6 +118,12 @@ export default function Details() {
               label="Demo opening hours"
               value={formatOperatingHours(l.hours)}
             />
+            {l.timezone && (
+              <StatCard
+                label="Right now"
+                value={isLocationOpen(l.hours, l.timezone) ? "Open" : "Closed"}
+              />
+            )}
           </View>
           <View style={{ gap: s.md }}>
             <Button

@@ -37,6 +37,11 @@ export function mapPredictionDto(
 export function mapLocationDtoToStudyLocation(dto: LocationDto): StudyLocation {
   return {
     id: dto.id,
+    buildingId: dto.building.id,
+    campusId: dto.campus.id,
+    campusName: dto.campus.name,
+    timezone: dto.campus.timezone,
+    distanceMeters: dto.distance_meters,
     name: dto.name,
     building: dto.building.name,
     floor: dto.floor,

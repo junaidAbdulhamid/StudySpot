@@ -1,15 +1,17 @@
 import { Modal, ScrollView, View } from "react-native";
+import { useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Button, Chip, Copy, IconButton, styles } from "../common";
 import { amenityOptions } from "../common/PreferenceFields";
 import { LocationFilters } from "../../types";
+import { defaultFilters } from "../../utils/filters";
 import { colors as c, spacing as s, radius as r } from "../../theme";
-// Distance is deliberately absent: no walking time exists until Phase 4 proximity search.
+// Radius and open-now controls share the same discovery state outside this sheet.
 export type FilterKind = "Crowding" | "Noise" | "Amenities";
 export function FilterSheet({
   kind,
   onClose,
-  value,
+  value: initial,
   onChange,
 }: {
   kind: FilterKind | null;
@@ -17,8 +19,9 @@ export function FilterSheet({
   value: LocationFilters;
   onChange: (value: LocationFilters) => void;
 }) {
+  const [value, setValue] = useState(initial);
   const update = (patch: Partial<LocationFilters>) =>
-    onChange({ ...value, ...patch });
+    setValue({ ...value, ...patch });
   return (
     <Modal
       visible={kind !== null}
@@ -98,7 +101,18 @@ export function FilterSheet({
                   />
                 ))}
             </View>
-            <Button label="Show study spaces" onPress={onClose} />
+            <Button
+              secondary
+              label="Reset filters"
+              onPress={() => setValue(defaultFilters)}
+            />
+            <Button
+              label="Show study spaces"
+              onPress={() => {
+                onChange(value);
+                onClose();
+              }}
+            />
           </ScrollView>
         </SafeAreaView>
       </View>

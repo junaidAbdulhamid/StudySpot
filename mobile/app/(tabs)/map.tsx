@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { View } from "react-native";
 import { CampusMap } from "../../components/navigation/CampusMap";
+import { mapGroups } from "../../components/navigation/mapModel";
 import {
   Chip,
   Copy,
@@ -13,95 +14,99 @@ import {
   ScreenHeader,
   styles,
 } from "../../components/common";
-import { CompactLocationCard } from "../../components/location";
+import { LocationCard } from "../../components/location";
+import { DiscoveryFilters } from "../../components/location/DiscoveryFilters";
+import { LocationPermission } from "../../components/location/LocationPermission";
+import { useDiscovery } from "../../store/DiscoveryProvider";
+import { useDeviceLocation } from "../../store/LocationProvider";
 import { useAsync } from "../../hooks/useAsync";
-import { locationService } from "../../services/locationService";
-import { OccupancyLevel } from "../../types";
-import { getOccupancyLevel, occupancyLabels } from "../../utils/occupancy";
-import { spacing as s } from "../../theme";
+import { campusService } from "../../services/campusService";
 export default function MapScreen() {
-  const { data, loading, error, retry } = useAsync(
-    locationService.getLocations,
-  );
-  const [filter, setFilter] = useState<OccupancyLevel | "any">("any");
-  const [selected, setSelected] = useState<string | null>("zone-1");
-  const [position, setPosition] = useState(true);
-  const locations = (data ?? []).filter(
-    (l) => filter === "any" || getOccupancyLevel(l.currentOccupancy) === filter,
-  );
+  const { data, loading, error, retry, filters } = useDiscovery();
+  const campus = useAsync(campusService.getCampuses);
+  const device = useDeviceLocation();
+  const [selected, setSelected] = useState<string | null>(null);
+  const [recenter, setRecenter] = useState(0);
+  const locations = data ?? [];
   const active = locations.find((l) => l.id === selected);
+  const groups = mapGroups(locations);
+  const center =
+    device.coordinates ??
+    campus.data?.find((c) => c.id === filters.campusId) ??
+    campus.data?.[0];
   return (
     <Screen>
       <ScreenHeader
         title="A new perspective."
         subtitle="Find your corner of campus."
       />
-      <View style={[styles.wrap, { marginBottom: s.lg }]}>
-        {(["any", "available", "moderate", "busy", "full"] as const).map(
-          (x) => (
-            <Chip
-              key={x}
-              label={x === "any" ? "All spaces" : occupancyLabels[x]}
-              selected={filter === x}
-              onPress={() => {
-                setFilter(x);
-                setSelected(null);
-              }}
-            />
-          ),
-        )}
-      </View>
+      <DiscoveryFilters />
       {loading ? (
         <LoadingSkeleton />
       ) : error ? (
         <ErrorState message={error} onRetry={retry} />
       ) : (
         <>
+          {campus.error && (
+            <ErrorState message={campus.error} onRetry={campus.retry} />
+          )}
           <CampusMap
             locations={locations}
             selectedId={selected}
             onSelect={setSelected}
-            showPosition={position}
+            center={center}
+            position={device.coordinates}
+            recenter={recenter}
           />
-          <View
-            style={[
-              styles.row,
-              { justifyContent: "space-between", marginVertical: s.lg },
-            ]}
-          >
-            <Copy variant="caption" muted>
-              Tap an occupancy marker
-            </Copy>
-            <View style={styles.row}>
-              <IconButton
-                icon="locate-outline"
-                label="Toggle demo starting point"
-                active={position}
-                onPress={() => setPosition(!position)}
+          <IconButton
+            icon="locate-outline"
+            label="Recenter map"
+            onPress={() => {
+              void device.refreshLocation();
+              setRecenter((value) => value + 1);
+            }}
+          />
+          <Copy muted>
+            Select a building, then choose a study zone. Occupancy is seeded
+            demo data.
+          </Copy>
+          <View style={styles.wrap}>
+            {groups.map((group) => (
+              <Chip
+                key={group.id}
+                label={group.best.building}
+                selected={group.locations.some((l) => l.id === selected)}
+                onPress={() => setSelected(group.best.id)}
               />
-              <IconButton
-                icon="refresh-outline"
-                label="Recenter map and show all spaces"
-                onPress={() => {
-                  setFilter("any");
-                  setSelected("zone-1");
-                  setPosition(true);
-                }}
-              />
-            </View>
+            ))}
           </View>
-          {active ? (
-            <CompactLocationCard location={active} />
-          ) : (
+          {active && (
+            <>
+              <View style={styles.wrap}>
+                {locations
+                  .filter((l) => l.buildingId === active.buildingId)
+                  .map((l) => (
+                    <Chip
+                      key={l.id}
+                      label={l.floor}
+                      selected={l.id === selected}
+                      onPress={() => setSelected(l.id)}
+                    />
+                  ))}
+              </View>
+              <LocationCard location={active} />
+            </>
+          )}
+          {!locations.length && (
             <EmptyState
-              title="Pick a place to explore"
-              message="Select a marker to see its floor, crowd level, and walking distance."
-              icon="map-outline"
+              title="No matching spaces"
+              message="Try a larger radius or reset your filters."
             />
           )}
         </>
       )}
-      <DemoNote text="Illustrated campus map · schematic positions and demo starting point. No device location is used." />
+      <LocationPermission />
+      <DemoNote text="Occupancy is seeded. GPS cannot identify your indoor floor." />
     </Screen>
   );
 }

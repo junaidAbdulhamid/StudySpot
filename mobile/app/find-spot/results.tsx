@@ -19,16 +19,18 @@ import { RecommendationScore } from "../../components/recommendations/Recommenda
 import { recommendationService } from "../../services/recommendationService";
 import { useAsync } from "../../hooks/useAsync";
 import { useApp } from "../../store/AppStore";
+import { useDeviceLocation } from "../../store/LocationProvider";
 import { colors as c, spacing as s } from "../../theme";
 export default function Results() {
   const { preferences } = useApp();
+  const { coordinates } = useDeviceLocation();
   const loader = useCallback(async () => {
     const [results] = await Promise.all([
-      recommendationService.getRecommendations(preferences),
+      recommendationService.getRecommendations(preferences, coordinates),
       new Promise((resolve) => setTimeout(resolve, 650)),
     ]);
     return results;
-  }, [preferences]);
+  }, [preferences, coordinates]);
   const { data, loading, error, retry } = useAsync(loader);
   return (
     <Screen>
@@ -37,6 +39,11 @@ export default function Results() {
         subtitle="Your top matches, made for this session."
         back
       />
+      <Copy muted>
+        {coordinates
+          ? `Proximity fallback: searching within ${Math.min(10000, preferences.maxWalk * 60)} m straight-line. This is not a ${preferences.maxWalk}-minute walking guarantee.`
+          : "Location unavailable: walking constraints cannot be applied. Enable location on Home for proximity filtering."}
+      </Copy>
       {loading ? (
         <>
           <Copy color={c.primary}>Finding your best study spots...</Copy>
@@ -93,7 +100,7 @@ export default function Results() {
       ) : (
         <EmptyState
           title="Let’s give you more options"
-          message="No spaces meet all your must-haves. Try fewer amenities. Walking preferences are saved for a future phase."
+          message="No spaces meet all your must-haves. Try fewer amenities or a wider proximity range."
           action="Adjust preferences"
           onAction={() => router.back()}
         />

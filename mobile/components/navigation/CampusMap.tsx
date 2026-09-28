@@ -1,149 +1,125 @@
-import { Pressable, View } from "react-native";
-import { StudyLocation } from "../../types";
-import { colors as c, radius as r, spacing as s } from "../../theme";
-import { Copy, Icon } from "../common";
+import { memo, useEffect, useRef, useState } from "react";
+import { View, Pressable } from "react-native";
+import Mapbox from "@rnmapbox/maps";
+import { Copy } from "../common";
+import { colors } from "../../theme";
+import { CampusMapProps, mapGroups, mapToken } from "./mapModel";
 import {
   getOccupancyColor,
   getOccupancyLevel,
   formatOccupancy,
 } from "../../utils/occupancy";
-export interface CampusMapProps {
-  locations: StudyLocation[];
-  selectedId: string | null;
-  onSelect: (id: string) => void;
-  showPosition?: boolean;
+if (mapToken) {
+  Mapbox.setAccessToken(mapToken);
+  Mapbox.setTelemetryEnabled(false);
 }
-// The screen depends only on this contract. A future native map provider can replace the schematic.
-export function CampusMap({
+export const CampusMap = memo(function CampusMap({
   locations,
   selectedId,
   onSelect,
-  showPosition = true,
+  center,
+  position,
+  recenter = 0,
 }: CampusMapProps) {
+  const camera = useRef<Mapbox.Camera>(null);
+  const [error, setError] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+  useEffect(() => {
+    if (center)
+      camera.current?.setCamera({
+        centerCoordinate: [center.longitude, center.latitude],
+        zoomLevel: 15,
+        animationDuration: 700,
+      });
+  }, [center, recenter]);
+  if (!mapToken)
+    return (
+      <Copy>
+        Map setup required: set EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN and restart the
+        development build. Browse spaces below while maps are unavailable.
+      </Copy>
+    );
+  if (!center) return <Copy>Loading campus map configuration…</Copy>;
   return (
-    <View
-      style={{
-        height: 380,
-        overflow: "hidden",
-        borderRadius: r.lg,
-        backgroundColor: c.surface,
-        borderWidth: 1,
-        borderColor: c.border,
-      }}
-    >
-      <View
-        style={{
-          position: "absolute",
-          left: "15%",
-          top: 0,
-          width: 24,
-          height: "100%",
-          backgroundColor: c.mapRoad,
-          transform: [{ rotate: "-15deg" }],
-        }}
-      />
-      <View
-        style={{
-          position: "absolute",
-          left: 0,
-          top: "46%",
-          height: 22,
-          width: "110%",
-          backgroundColor: c.mapRoad,
-          transform: [{ rotate: "12deg" }],
-        }}
-      />
-      <View
-        style={{
-          position: "absolute",
-          right: "21%",
-          top: 0,
-          width: 14,
-          height: "100%",
-          backgroundColor: c.mapRoad,
-          transform: [{ rotate: "22deg" }],
-        }}
-      />
-      {[
-        { left: 34, top: 13, width: 29, height: 22 },
-        { left: 5, top: 60, width: 26, height: 28 },
-        { left: 52, top: 59, width: 32, height: 26 },
-      ].map((b, i) => (
-        <View
-          key={i}
-          style={{
-            position: "absolute",
-            left: `${b.left}%`,
-            top: `${b.top}%`,
-            width: `${b.width}%`,
-            height: `${b.height}%`,
-            backgroundColor: c.mapGreen,
-            borderRadius: r.md,
-            borderWidth: 1,
-            borderColor: c.border,
+    <View style={{ height: 400, borderRadius: 20, overflow: "hidden" }}>
+      <Mapbox.MapView
+        style={{ flex: 1 }}
+        styleURL={Mapbox.StyleURL.Dark}
+        onMapLoadingError={() => setError(true)}
+        onDidFinishLoadingMap={() => setLoaded(true)}
+      >
+        <Mapbox.Camera
+          ref={camera}
+          defaultSettings={{
+            centerCoordinate: [center.longitude, center.latitude],
+            zoomLevel: 15,
           }}
         />
-      ))}
-      <View style={{ position: "absolute", left: "36%", top: "37%" }}>
-        <Copy variant="label" muted>
-          MASON CAMPUS
-        </Copy>
-      </View>
-      {locations.map((l, index) => {
-        const left = 8 + (index % 4) * 23;
-        const top = 8 + Math.floor(index / 4) * 29;
-        const selected = l.id === selectedId;
-        const color = getOccupancyColor(getOccupancyLevel(l.currentOccupancy));
-        return (
-          <Pressable
-            key={l.id}
-            accessibilityRole="button"
-            accessibilityLabel={`${l.name}, ${l.floor}, ${formatOccupancy(l.currentOccupancy)} ${getOccupancyLevel(l.currentOccupancy)}`}
-            accessibilityState={{ selected }}
-            onPress={() => onSelect(l.id)}
-            style={({ pressed }) => ({
-              position: "absolute",
-              left: `${left}%`,
-              top: `${top}%`,
-              minWidth: 48,
-              minHeight: 44,
-              borderRadius: r.pill,
-              padding: s.sm,
-              backgroundColor: selected ? color : c.background,
-              borderWidth: 2,
-              borderColor: color,
-              alignItems: "center",
-              justifyContent: "center",
-              opacity: pressed ? 0.7 : 1,
-            })}
-          >
-            <Copy
-              variant="caption"
-              color={selected ? c.background : color}
-              style={{ fontWeight: "700" }}
+        {mapGroups(locations).map((group) => {
+          const selected = group.locations.some((l) => l.id === selectedId);
+          const level = getOccupancyLevel(group.best.currentOccupancy);
+          return (
+            <Mapbox.MarkerView
+              key={group.id}
+              coordinate={[group.best.longitude, group.best.latitude]}
             >
-              {formatOccupancy(l.currentOccupancy)}
-            </Copy>
-          </Pressable>
-        );
-      })}
-      {showPosition && (
-        <View
-          accessibilityLabel="Demo starting point"
+              <Pressable
+                onPress={() => onSelect(group.best.id)}
+                accessibilityRole="button"
+                accessibilityLabel={`${group.best.building}, ${level}, ${formatOccupancy(group.best.currentOccupancy)}, ${group.locations.length} study zones`}
+                style={{
+                  backgroundColor: colors.background,
+                  borderWidth: selected ? 3 : 1,
+                  borderColor: getOccupancyColor(level),
+                  padding: 8,
+                  borderRadius: 12,
+                }}
+              >
+                <Copy>
+                  {group.best.building} ·{" "}
+                  {formatOccupancy(group.best.currentOccupancy)} {level}
+                </Copy>
+              </Pressable>
+            </Mapbox.MarkerView>
+          );
+        })}
+        {position && (
+          <Mapbox.PointAnnotation
+            id="current-position"
+            coordinate={[position.longitude, position.latitude]}
+          >
+            <View
+              accessibilityLabel="Your approximate location"
+              style={{
+                width: 20,
+                height: 20,
+                borderRadius: 10,
+                backgroundColor: "#5DAAFF",
+                borderWidth: 3,
+                borderColor: "white",
+              }}
+            />
+          </Mapbox.PointAnnotation>
+        )}
+      </Mapbox.MapView>
+      {!loaded && !error && (
+        <Copy
           style={{
             position: "absolute",
-            bottom: 18,
-            left: "43%",
-            padding: 8,
-            borderRadius: 30,
-            borderWidth: 6,
-            borderColor: c.surfaceElevated,
-            backgroundColor: c.primary,
+            top: 8,
+            left: 8,
+            backgroundColor: colors.background,
           }}
         >
-          <Icon name="navigate" size={16} color={c.background} />
-        </View>
+          Loading campus map…
+        </Copy>
+      )}
+      {error && (
+        <Copy>
+          Map could not load. Check your connection and map token. Study spaces
+          remain available below.
+        </Copy>
       )}
     </View>
   );
-}
+});

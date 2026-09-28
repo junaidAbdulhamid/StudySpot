@@ -11,7 +11,22 @@
       "bundleIdentifier": "edu.studyspot.mobile"
     },
     "android": { "package": "edu.studyspot.mobile" },
-    "plugins": ["expo-router"],
+    "plugins": [
+      "expo-router",
+      "@rnmapbox/maps",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "StudySpot uses your location while you use the app to find nearby study spaces.",
+          "locationAlwaysAndWhenInUsePermission": false,
+          "locationAlwaysPermission": false,
+          "motionUsagePermission": false,
+          "isIosBackgroundLocationEnabled": false,
+          "isAndroidBackgroundLocationEnabled": false,
+          "isAndroidForegroundServiceEnabled": false
+        }
+      ]
+    ],
     "web": { "bundler": "metro", "output": "single" }
   }
 }

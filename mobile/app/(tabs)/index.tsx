@@ -1,4 +1,6 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
+import { useDeviceLocation } from "../../store/LocationProvider";
+import { LocationPermission } from "../../components/location/LocationPermission";
 import { Pressable, View } from "react-native";
 import { router } from "expo-router";
 import {
@@ -24,11 +26,23 @@ import { useApp } from "../../store/AppStore";
 import { colors as c, spacing as s } from "../../theme";
 import { rankLocations } from "../../utils/recommendations";
 export default function Home() {
+  const { coordinates } = useDeviceLocation();
   const { data, loading, error, retry } = useAsync(
-    locationService.getLocations,
+    useCallback(
+      () =>
+        coordinates
+          ? locationService.getNearbyLocations(
+              coordinates.latitude,
+              coordinates.longitude,
+            )
+          : locationService.getLocations(),
+      [coordinates],
+    ),
   );
   const { preferences, favorites, user } = useApp();
-  const matches = rankLocations(data ?? [], preferences);
+  const matches = coordinates
+    ? (data ?? []).map((location) => ({ location }))
+    : rankLocations(data ?? [], preferences);
   const [query, setQuery] = useState("");
   const hour = new Date().getHours();
   const greeting =
@@ -65,7 +79,7 @@ export default function Home() {
       <View style={[styles.row, { marginBottom: s.xl }]}>
         <Icon name="location-outline" size={16} color={c.primary} />
         <Copy variant="caption" muted>
-          GEORGE MASON · FAIRFAX CAMPUS
+          {data?.[0]?.campusName ?? "Campus study spaces"}
         </Copy>
       </View>
       <SearchBar
@@ -123,8 +137,9 @@ export default function Home() {
           onPress={() => router.push("/find-spot")}
         />
       </Card>
+      <LocationPermission />
       <SectionHeader
-        title="Best spots for you"
+        title={coordinates ? "Study spots near you" : "Best spots for you"}
         action="See all"
         onPress={() => router.push("/(tabs)/explore")}
       />

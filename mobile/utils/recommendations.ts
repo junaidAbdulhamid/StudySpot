@@ -6,6 +6,8 @@ export function rankLocations(
   return locations
     .filter(
       (l) =>
+        (l.walkingDurationSeconds == null ||
+          l.walkingDurationSeconds <= prefs.maxWalk * 60) &&
         (l.walkingMinutes === null || l.walkingMinutes <= prefs.maxWalk) &&
         prefs.amenities.every((a) => l.amenities.includes(a)),
     )

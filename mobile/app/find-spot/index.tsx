@@ -27,7 +27,8 @@ export default function FindSpot() {
         <Icon name="sparkles-outline" color={c.primary} />
         <Copy muted>
           We’ll balance seeded crowd levels and your study style. Must-haves
-          stay must-haves. Walking distance will be available in a future phase.
+          stay must-haves. With location enabled, walking preferences use real
+          routes where available, otherwise a clearly labeled geographic radius.
         </Copy>
       </Card>
       <PreferenceFields value={value} onChange={setValue} includeDuration />

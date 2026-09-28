@@ -1,39 +1,74 @@
-import { router } from "expo-router";
+import { useCallback, useState } from "react";
 import {
   Button,
   Card,
   Copy,
-  DemoNote,
   Screen,
   ScreenHeader,
 } from "../../components/common";
 import { LocationBoundary } from "../../components/location/LocationBoundary";
-import { CampusMap } from "../../components/navigation/CampusMap";
 import { useLocation } from "../../hooks/useLocation";
+import { useAsync } from "../../hooks/useAsync";
+import { useDeviceLocation } from "../../store/LocationProvider";
+import { routingService } from "../../services/location/routingService";
+import { openDirections } from "../../services/location/directionsService";
+import {
+  distanceLabel,
+  formatDistance,
+  formatDuration,
+} from "../../utils/geospatial";
 export default function Directions() {
   const state = useLocation();
+  const { coordinates } = useDeviceLocation();
+  const latitude = state.data?.latitude;
+  const longitude = state.data?.longitude;
+  const route = useAsync(
+    useCallback(
+      () =>
+        coordinates && latitude != null && longitude != null
+          ? routingService.getWalkingRoute(coordinates, { latitude, longitude })
+          : Promise.resolve(null),
+      [coordinates, latitude, longitude],
+    ),
+  );
+  const [error, setError] = useState<string | null>(null);
   return (
     <LocationBoundary state={state}>
-      {(l) => (
+      {(location) => (
         <Screen>
           <ScreenHeader
             title="Your next stop."
-            subtitle={`${l.name} · ${l.floor}`}
+            subtitle={`${location.name} · ${location.floor}`}
             back
           />
-          <CampusMap locations={[l]} selectedId={l.id} onSelect={() => {}} />
-          <DemoNote text="Route preview · illustrative campus map" />
           <Card>
-            <Copy variant="heading">Walking routes are coming later</Copy>
+            <Copy variant="heading">
+              {route.data
+                ? `${formatDuration(route.data.durationSeconds)} · ${formatDistance(route.data.distanceMeters)} walking route`
+                : distanceLabel(location)}
+            </Copy>
             <Copy muted>
-              Head toward {l.building}, then find {l.floor.toLowerCase()}. This
-              demo does not provide turn-by-turn directions or use your current
-              location.
+              {route.loading
+                ? "Checking walking route…"
+                : route.data
+                  ? "Walking route supplied by Mapbox. Indoor access and floor navigation are not included."
+                  : "Walking route unavailable. You can open directions in your maps app."}
             </Copy>
             <Button
-              label="Explore campus map"
-              onPress={() => router.push("/(tabs)/map")}
+              label="Open walking directions"
+              onPress={() => {
+                void openDirections(location).catch(() =>
+                  setError(
+                    "Could not open maps. Try again with a browser or maps app installed.",
+                  ),
+                );
+              }}
             />
+            {error && <Copy>{error}</Copy>}
+            <Copy muted>
+              Directions open an external maps provider. Your device and that
+              provider control location use there.
+            </Copy>
           </Card>
         </Screen>
       )}

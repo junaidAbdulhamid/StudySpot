@@ -219,3 +219,7 @@ __marimo__/
 
 # Codex relay (Adam/Junaid) handoff briefs, logs and state
 .handoff/
+
+# Expo Continuous Native Generation; native configuration lives in app.json.
+mobile/ios/
+mobile/android/

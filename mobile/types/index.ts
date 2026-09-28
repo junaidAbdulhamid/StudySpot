@@ -47,6 +47,12 @@ export interface OccupancyPrediction {
   source?: string;
 }
 export interface StudyLocation {
+  buildingId?: string;
+  campusId?: string;
+  campusName?: string;
+  timezone?: string;
+  distanceMeters?: number;
+  walkingDurationSeconds?: number;
   id: string;
   name: string;
   building: string;
@@ -90,6 +96,9 @@ export interface Alert {
   percent: number;
 }
 export interface LocationFilters {
+  radiusMeters?: number;
+  openNow?: boolean;
+  nearest?: boolean;
   campusId?: string;
   buildingId?: string;
   query: string;

@@ -27,6 +27,7 @@ export const predictionDto = z.object({
   created_at: timestamp,
 });
 export const locationDto = z.object({
+  distance_meters: z.number().nonnegative().optional(),
   id: z.string(),
   name: z.string(),
   floor: z.string(),
