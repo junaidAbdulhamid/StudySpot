@@ -64,6 +64,8 @@ export interface StudyLocation {
   amenities: Amenity[];
   currentOccupancy: number | null;
   estimatedAt?: string;
+  estimateId?: string;
+  occupancySignalCount?: number;
   occupancySource?: string;
   imageUrl?: string | null;
   historicalLabels?: string[];
@@ -75,11 +77,6 @@ export interface StudyLocation {
   hours: { open: string; close: string };
   predictions: OccupancyPrediction[];
   historical: number[];
-}
-export interface CrowdReport {
-  locationId: string;
-  level: OccupancyLevel;
-  createdAt: string;
 }
 export interface Recommendation {
   location: StudyLocation;

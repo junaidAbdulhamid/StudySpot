@@ -26,9 +26,10 @@ export default function FindSpot() {
       <Card style={{ marginBottom: s["2xl"] }}>
         <Icon name="sparkles-outline" color={c.primary} />
         <Copy muted>
-          We’ll balance seeded crowd levels and your study style. Must-haves
-          stay must-haves. With location enabled, walking preferences use real
-          routes where available, otherwise a clearly labeled geographic radius.
+          We’ll balance available crowd estimates and your study style.
+          Must-haves stay must-haves. With location enabled, walking preferences
+          use real routes where available, otherwise a clearly labeled
+          geographic radius.
         </Copy>
       </Card>
       <PreferenceFields value={value} onChange={setValue} includeDuration />

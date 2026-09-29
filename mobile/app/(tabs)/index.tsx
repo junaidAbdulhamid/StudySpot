@@ -1,8 +1,8 @@
 import { useState, useCallback } from "react";
+import { router, useFocusEffect } from "expo-router";
 import { useDeviceLocation } from "../../store/LocationProvider";
 import { LocationPermission } from "../../components/location/LocationPermission";
 import { Pressable, View } from "react-native";
-import { router } from "expo-router";
 import {
   Avatar,
   Button,
@@ -22,6 +22,8 @@ import {
 import { CompactLocationCard, LocationCard } from "../../components/location";
 import { useAsync } from "../../hooks/useAsync";
 import { locationService } from "../../services/locationService";
+import { occupancyService } from "../../services/occupancyService";
+import { errorMessage } from "../../services/api/client";
 import { useApp } from "../../store/AppStore";
 import { colors as c, spacing as s } from "../../theme";
 import { rankLocations } from "../../utils/recommendations";
@@ -39,11 +41,29 @@ export default function Home() {
       [coordinates],
     ),
   );
+  const active = useAsync(
+    useCallback(() => occupancyService.activeCheckIn(), []),
+  );
+  const activeRetry = active.retry;
+  useFocusEffect(
+    useCallback(() => {
+      retry();
+    }, [retry]),
+  );
+  useFocusEffect(
+    useCallback(() => {
+      activeRetry();
+    }, [activeRetry]),
+  );
   const { preferences, favorites, user } = useApp();
   const matches = coordinates
     ? (data ?? []).map((location) => ({ location }))
     : rankLocations(data ?? [], preferences);
+  const activeLocation = data?.find(
+    (item) => item.id === active.data?.location_id,
+  );
   const [query, setQuery] = useState("");
+  const [checkoutError, setCheckoutError] = useState("");
   const hour = new Date().getHours();
   const greeting =
     hour < 12
@@ -76,6 +96,45 @@ export default function Home() {
           <Avatar name={user.name} />
         </Pressable>
       </View>
+      {active.data && (
+        <Card style={{ marginBottom: s.lg }}>
+          <Copy variant="label" color={c.primary}>
+            CURRENTLY STUDYING
+          </Copy>
+          <Copy>
+            {activeLocation
+              ? `${activeLocation.name} · ${activeLocation.floor}`
+              : "Study space"}
+          </Copy>
+          <Copy muted variant="caption">
+            Checked in{" "}
+            {new Date(active.data.checked_in_at).toLocaleTimeString([], {
+              hour: "numeric",
+              minute: "2-digit",
+            })}
+          </Copy>
+          <Button
+            label="Check Out"
+            secondary
+            onPress={() => {
+              if (active.data)
+                void occupancyService
+                  .checkOut(active.data.id)
+                  .then(() => {
+                    setCheckoutError("");
+                    active.retry();
+                    retry();
+                  })
+                  .catch((cause) => setCheckoutError(errorMessage(cause)));
+            }}
+          />
+          {checkoutError && (
+            <Copy muted variant="caption">
+              {checkoutError}
+            </Copy>
+          )}
+        </Card>
+      )}
       <View style={[styles.row, { marginBottom: s.xl }]}>
         <Icon name="location-outline" size={16} color={c.primary} />
         <Copy variant="caption" muted>
@@ -182,7 +241,7 @@ export default function Home() {
           )}
         </>
       )}
-      <DemoNote />
+      <DemoNote text="Crowd levels are estimates from recent contributions; forecasts remain illustrative." />
     </Screen>
   );
 }

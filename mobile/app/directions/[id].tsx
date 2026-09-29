@@ -51,7 +51,7 @@ export default function Directions() {
               {route.loading
                 ? "Checking walking route…"
                 : route.data
-                  ? "Walking route supplied by Mapbox. Indoor access and floor navigation are not included."
+                  ? "Walking route supplied by the configured route provider. Indoor access and floor navigation are not included."
                   : "Walking route unavailable. You can open directions in your maps app."}
             </Copy>
             <Button

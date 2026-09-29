@@ -8,7 +8,7 @@ import React, {
   useCallback,
   useRef,
 } from "react";
-import { CrowdReport, UserPreferences, User } from "../types";
+import { UserPreferences, User } from "../types";
 import { defaultPreferences, userService } from "../services/userService";
 import { favoriteService } from "../services/favoriteService";
 import { errorMessage } from "../services/api/client";
@@ -21,8 +21,6 @@ interface State {
   preferences: UserPreferences;
   favorites: string[];
   recent: string[];
-  checkIn: string | null;
-  reports: CrowdReport[];
   notifications: boolean;
   storageError: string | null;
   mutationError: string | null;
@@ -35,8 +33,6 @@ interface Actions {
   savePreferences: (p: UserPreferences) => Promise<boolean>;
   toggleFavorite: (id: string) => Promise<void>;
   visit: (id: string) => void;
-  setCheckIn: (id: string | null) => void;
-  addReport: (r: CrowdReport) => void;
   setNotifications: (v: boolean) => void;
   clearMutationError: () => void;
 }
@@ -49,8 +45,6 @@ const initial: State = {
   preferences: defaultPreferences,
   favorites: [],
   recent: [],
-  checkIn: null,
-  reports: [],
   notifications: true,
   storageError: null,
   mutationError: null,
@@ -244,9 +238,6 @@ function AccountStore({ children }: React.PropsWithChildren) {
         toggleFavorite,
         visit,
         logout: auth.signOut,
-        setCheckIn: (checkIn) => set((s) => ({ ...s, checkIn })),
-        addReport: (report) =>
-          set((s) => ({ ...s, reports: [...s.reports, report] })),
         setNotifications: (notifications) =>
           set((s) => ({ ...s, notifications })),
         clearMutationError: () => set((s) => ({ ...s, mutationError: null })),

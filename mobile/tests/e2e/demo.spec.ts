@@ -250,5 +250,47 @@ test("invalid credentials and backend outages are recoverable", async ({
   ).toBeVisible();
   await page.unroute(pattern);
   await page.getByRole("button", { name: "Try again" }).click();
-  await expect(page.getByText(/study spaces · Seed data/)).toBeVisible();
+  await expect(
+    page.getByText(/study spaces · Live crowd estimates/),
+  ).toBeVisible();
+});
+
+test("crowd report updates the aggregate seen by another student", async ({
+  page,
+  browser,
+}) => {
+  await signIn(page, "alex@example.edu");
+  await openFenwick(page);
+  await expect(
+    page.getByText("Not enough recent data.", { exact: false }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Check In", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Check In", exact: true })
+    .last()
+    .click();
+  await expect(page.getByText("Checked in", { exact: true })).toBeVisible();
+  await page.goto("/report/zone-1?mode=crowd");
+  await page.getByRole("button", { name: "Moderate", exact: true }).click();
+  await page.getByRole("button", { name: "Submit Crowd Report" }).click();
+  await expect(
+    page.getByText("Your report helps other students choose a study spot."),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Back to location" }).click();
+  await expect(page.getByText("50%", { exact: true }).first()).toBeVisible();
+  await page.getByRole("button", { name: "Looks right" }).click();
+  await expect(page.getByText(/Thanks — your feedback helps/)).toBeVisible();
+
+  const other = await browser.newContext();
+  const otherPage = await other.newPage();
+  await signIn(otherPage, "blair@example.edu");
+  await openFenwick(otherPage);
+  await expect(
+    otherPage.getByText("50%", { exact: true }).first(),
+  ).toBeVisible();
+  await other.close();
+
+  await page.goto("/report/zone-1?mode=checkin");
+  await page.getByRole("button", { name: "Check Out" }).click();
+  await expect(page.getByText("Study here?", { exact: true })).toBeVisible();
 });

@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { View } from "react-native";
 import { router } from "expo-router";
 import {
@@ -27,9 +27,13 @@ import { LocationBoundary } from "../../components/location/LocationBoundary";
 import { WalkingRouteSummary } from "../../components/location/WalkingRouteSummary";
 import { useLocation } from "../../hooks/useLocation";
 import { useApp } from "../../store/AppStore";
+import { useDeviceLocation } from "../../store/LocationProvider";
+import { occupancyService } from "../../services/occupancyService";
+import { errorMessage } from "../../services/api/client";
 import { colors as c, radius as r, spacing as s } from "../../theme";
 import {
   formatOperatingHours,
+  formatEstimateAge,
   getOccupancyLevel,
   formatOccupancy,
 } from "../../utils/occupancy";
@@ -37,6 +41,28 @@ import { isLocationOpen } from "../../utils/geospatial";
 export default function Details() {
   const state = useLocation();
   const { visit } = useApp();
+  const { coordinates } = useDeviceLocation();
+  const [validationMessage, setValidationMessage] = useState("");
+  async function validate(
+    locationId: string,
+    estimateId: string,
+    kind: "accurate" | "more_crowded" | "less_crowded",
+  ) {
+    try {
+      await occupancyService.validate(
+        locationId,
+        estimateId,
+        kind,
+        coordinates,
+      );
+      setValidationMessage(
+        "Thanks — your feedback helps improve this estimate.",
+      );
+      state.retry();
+    } catch (cause) {
+      setValidationMessage(errorMessage(cause));
+    }
+  }
   const id = state.data?.id;
   useEffect(() => {
     if (id) visit(id);
@@ -72,10 +98,9 @@ export default function Details() {
               </View>
             </LocationImage>
           </View>
-          <DemoNote />
           <Card>
             <Copy variant="label" muted>
-              CURRENT OCCUPANCY
+              ESTIMATED OCCUPANCY
             </Copy>
             <View
               style={[
@@ -87,6 +112,16 @@ export default function Details() {
               <OccupancyBadge percent={l.currentOccupancy} />
             </View>
             <OccupancyBar percent={l.currentOccupancy} />
+            <Copy muted variant="caption">
+              {l.currentOccupancy === null
+                ? "Not enough recent data. Help other students by reporting the crowd."
+                : `${l.occupancyConfidence ?? "Low"} confidence · Updated ${formatEstimateAge(l.estimatedAt)}`}
+            </Copy>
+            {l.currentOccupancy !== null && l.occupancyConfidence === "low" && (
+              <Copy muted variant="caption">
+                Based on limited recent data.
+              </Copy>
+            )}
             <Copy muted>
               {
                 {
@@ -99,6 +134,39 @@ export default function Details() {
                 }[getOccupancyLevel(l.currentOccupancy)]
               }
             </Copy>
+            {l.estimateId && l.currentOccupancy !== null && (
+              <View style={{ marginTop: s.lg, gap: s.sm }}>
+                <Copy muted>Does this estimate look right?</Copy>
+                <View style={styles.wrap}>
+                  <Button
+                    label="Looks right"
+                    secondary
+                    onPress={() =>
+                      void validate(l.id, l.estimateId!, "accurate")
+                    }
+                  />
+                  <Button
+                    label="More crowded"
+                    secondary
+                    onPress={() =>
+                      void validate(l.id, l.estimateId!, "more_crowded")
+                    }
+                  />
+                  <Button
+                    label="Less crowded"
+                    secondary
+                    onPress={() =>
+                      void validate(l.id, l.estimateId!, "less_crowded")
+                    }
+                  />
+                </View>
+                {validationMessage && (
+                  <Copy muted variant="caption">
+                    {validationMessage}
+                  </Copy>
+                )}
+              </View>
+            )}
           </Card>
           <View style={[styles.wrap, { marginTop: s.lg }]}>
             <NoiseBadge noise={l.noiseLevel} />

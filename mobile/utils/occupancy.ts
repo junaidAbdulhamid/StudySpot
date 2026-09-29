@@ -10,7 +10,7 @@ export const occupancyLabels: Record<OccupancyLevel, string> = {
   moderate: "Moderate",
   busy: "Busy",
   full: "Nearly full",
-  unknown: "Unavailable",
+  unknown: "Not enough recent data",
 };
 export const getOccupancyLabel = (percent: number | null) =>
   occupancyLabels[getOccupancyLevel(percent)];

@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import { useLocalSearchParams } from "expo-router";
+import { useFocusEffect, useLocalSearchParams } from "expo-router";
 import { locationService } from "../services/locationService";
 import { useAsync } from "./useAsync";
 import { useDeviceLocation } from "../store/LocationProvider";
@@ -9,6 +9,14 @@ export function useLocation() {
   const { coordinates } = useDeviceLocation();
   const state = useAsync(
     useCallback(() => locationService.getLocationById(id), [id]),
+  );
+  const retry = state.retry;
+  useFocusEffect(
+    useCallback(() => {
+      retry();
+      const timer = setInterval(retry, 45000);
+      return () => clearInterval(timer);
+    }, [retry]),
   );
   return {
     ...state,

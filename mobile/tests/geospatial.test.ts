@@ -130,29 +130,32 @@ test("distance semantics and overnight campus hours", () => {
     false,
   );
 });
-test("routing caches real routes and gracefully handles missing token and failures", async () => {
+test("routing caches real routes and gracefully handles missing configuration and failures", async () => {
   const origin = { latitude: 38, longitude: -77 };
   let calls = 0;
-  const provider = createRoutingProvider("public-test", async () => {
-    calls++;
-    return new Response(
-      JSON.stringify({
-        routes: [
-          {
-            distance: 430,
-            duration: 360,
-            geometry: {
-              type: "LineString",
-              coordinates: [
-                [-77, 38],
-                [-77, 38.1],
-              ],
+  const provider = createRoutingProvider(
+    "https://router.example/route/v1/foot",
+    async () => {
+      calls++;
+      return new Response(
+        JSON.stringify({
+          routes: [
+            {
+              distance: 430,
+              duration: 360,
+              geometry: {
+                type: "LineString",
+                coordinates: [
+                  [-77, 38],
+                  [-77, 38.1],
+                ],
+              },
             },
-          },
-        ],
-      }),
-    );
-  });
+          ],
+        }),
+      );
+    },
+  );
   assert.equal(
     (await provider.getWalkingRoute(origin, origin))?.durationSeconds,
     360,
@@ -168,7 +171,7 @@ test("routing caches real routes and gracefully handles missing token and failur
   );
   assert.equal(
     await createRoutingProvider(
-      "public-test",
+      "https://router.example/route/v1/foot",
       async () => new Response("", { status: 429 }),
     ).getWalkingRoute(origin, origin),
     null,

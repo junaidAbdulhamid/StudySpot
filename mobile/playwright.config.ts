@@ -1,6 +1,7 @@
 import { defineConfig } from "@playwright/test";
 export default defineConfig({
   testDir: "./tests/e2e",
+  testIgnore: "**/map-live.spec.ts",
   timeout: 60000,
   workers: 1,
   use: {
@@ -18,7 +19,7 @@ export default defineConfig({
       timeout: 120000,
     },
     {
-      command: "npx expo start --web --port 8081",
+      command: "npm run prepare:map-worker && npx expo start --web --port 8081",
       url: "http://127.0.0.1:8081",
       reuseExistingServer: false,
       timeout: 120000,
@@ -26,7 +27,6 @@ export default defineConfig({
         EXPO_PUBLIC_API_URL: "http://127.0.0.1:8002/api/v1",
         EXPO_PUBLIC_SUPABASE_URL: "http://127.0.0.1:8002/test-auth",
         EXPO_PUBLIC_SUPABASE_ANON_KEY: "e2e-public-key",
-        EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN: "",
       },
     },
   ],

@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
+import { useFocusEffect } from "expo-router";
 import { View } from "react-native";
 import { CampusMap } from "../../components/navigation/CampusMap";
 import { mapGroups } from "../../components/navigation/mapModel";
@@ -23,6 +24,13 @@ import { useAsync } from "../../hooks/useAsync";
 import { campusService } from "../../services/campusService";
 export default function MapScreen() {
   const { data, loading, error, retry, filters } = useDiscovery();
+  useFocusEffect(
+    useCallback(() => {
+      retry();
+      const timer = setInterval(retry, 60000);
+      return () => clearInterval(timer);
+    }, [retry]),
+  );
   const campus = useAsync(campusService.getCampuses);
   const device = useDeviceLocation();
   const [selected, setSelected] = useState<string | null>(null);
@@ -67,8 +75,8 @@ export default function MapScreen() {
             }}
           />
           <Copy muted>
-            Select a building, then choose a study zone. Occupancy is seeded
-            demo data.
+            Select a building, then choose a study zone. Crowd levels are
+            estimates from recent reports.
           </Copy>
           <View style={styles.wrap}>
             {groups.map((group) => (
@@ -106,7 +114,7 @@ export default function MapScreen() {
         </>
       )}
       <LocationPermission />
-      <DemoNote text="Occupancy is seeded. GPS cannot identify your indoor floor." />
+      <DemoNote text="Crowd estimates may be unknown until students report. GPS cannot identify your indoor floor." />
     </Screen>
   );
 }

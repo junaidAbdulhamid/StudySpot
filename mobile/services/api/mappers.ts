@@ -51,6 +51,8 @@ export function mapLocationDtoToStudyLocation(dto: LocationDto): StudyLocation {
     noiseLevel: dto.noise_level,
     amenities: mapAmenities(dto.amenities),
     currentOccupancy: dto.current_occupancy?.percent ?? null,
+    estimateId: dto.current_occupancy?.id,
+    occupancySignalCount: dto.current_occupancy?.signal_count,
     occupancyConfidence: dto.current_occupancy?.confidence ?? null,
     estimatedAt: dto.current_occupancy?.estimated_at,
     occupancySource: dto.current_occupancy?.source,

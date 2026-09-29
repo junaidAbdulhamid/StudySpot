@@ -65,8 +65,9 @@ export default function Settings() {
             Passwords are handled by Supabase and are never sent to StudySpot.
             Foreground location is optional. Coordinates stay briefly in memory
             and are sent to StudySpot for nearby search, without being saved to
-            your account. Maps and optional walking routes use Mapbox; that
-            provider receives map requests and route endpoints. There is no
+            your account. Map tiles come from the configured tile provider, and
+            optional walking routes use the configured routing provider; those
+            providers receive map requests or route endpoints. There is no
             background tracking or movement history. Clearing app data does not
             delete server preferences or favorites.
           </Copy>

@@ -131,7 +131,7 @@ export default function Predictions() {
                 }))}
               />
             </Card>
-            <DemoNote text="Estimates and forecasts are persisted seed records, not live occupancy or ML predictions. Update times come from the database." />
+            <DemoNote text="Current occupancy comes from recent contributions when available. Forecasts and historical charts are seeded examples, not ML predictions." />
             <Button
               label="Check In / Report Crowd"
               secondary

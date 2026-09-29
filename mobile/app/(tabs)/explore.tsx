@@ -1,6 +1,6 @@
-import { useEffect } from "react";
+import { useCallback, useEffect } from "react";
+import { useFocusEffect, useLocalSearchParams } from "expo-router";
 import { FlatList } from "react-native";
-import { useLocalSearchParams } from "expo-router";
 import {
   Copy,
   EmptyState,
@@ -16,6 +16,11 @@ import { useDeviceLocation } from "../../store/LocationProvider";
 export default function Explore() {
   const { q } = useLocalSearchParams<{ q?: string }>();
   const { data, loading, error, retry, setFilters } = useDiscovery();
+  useFocusEffect(
+    useCallback(() => {
+      retry();
+    }, [retry]),
+  );
   const { coordinates } = useDeviceLocation();
   useEffect(() => {
     if (q !== undefined) setFilters((current) => ({ ...current, query: q }));
@@ -27,7 +32,9 @@ export default function Explore() {
         subtitle="A space for every kind of study session."
       />
       <DiscoveryFilters />
-      <Copy muted>{data?.length ?? 0} study spaces · Seed data</Copy>
+      <Copy muted>
+        {data?.length ?? 0} study spaces · Live crowd estimates when available
+      </Copy>
       <Copy muted>
         {coordinates
           ? "Distances are straight-line; radius results are capped at 100."

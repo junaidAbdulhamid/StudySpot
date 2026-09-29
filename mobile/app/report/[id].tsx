@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import {
@@ -6,7 +6,6 @@ import {
   Card,
   Chip,
   Copy,
-  DemoNote,
   Icon,
   Screen,
   ScreenHeader,
@@ -15,8 +14,10 @@ import {
 import { LocationImage } from "../../components/location";
 import { LocationBoundary } from "../../components/location/LocationBoundary";
 import { useLocation } from "../../hooks/useLocation";
-import { useApp } from "../../store/AppStore";
-import { OccupancyLevel } from "../../types";
+import { useAsync } from "../../hooks/useAsync";
+import { useDeviceLocation } from "../../store/LocationProvider";
+import { errorMessage } from "../../services/api/client";
+import { CrowdLevel, occupancyService } from "../../services/occupancyService";
 import { colors as c, spacing as s, radius as r } from "../../theme";
 import { getOccupancyColor } from "../../utils/occupancy";
 export default function Report() {
@@ -25,9 +26,41 @@ export default function Report() {
   const [tab, setTab] = useState(
     mode === "crowd" ? "Report Crowd" : "Check In",
   );
-  const [level, setLevel] = useState<OccupancyLevel | null>(null);
+  const [level, setLevel] = useState<CrowdLevel | null>(null);
   const [submitted, setSubmitted] = useState(false);
-  const { checkIn, setCheckIn, addReport } = useApp();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const { coordinates } = useDeviceLocation();
+  const active = useAsync(
+    useCallback(() => occupancyService.activeCheckIn(), []),
+  );
+  async function handleCheckIn(locationId: string) {
+    setBusy(true);
+    setError(null);
+    try {
+      if (active.data?.location_id === locationId)
+        await occupancyService.checkOut(active.data.id);
+      else await occupancyService.checkIn(locationId, coordinates);
+      active.retry();
+    } catch (cause) {
+      setError(errorMessage(cause));
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function handleReport(locationId: string) {
+    if (!level) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await occupancyService.submitReport(locationId, level, coordinates);
+      setSubmitted(true);
+    } catch (cause) {
+      setError(errorMessage(cause));
+    } finally {
+      setBusy(false);
+    }
+  }
   return (
     <LocationBoundary state={state}>
       {(l) => (
@@ -62,7 +95,7 @@ export default function Report() {
             <Card style={{ alignItems: "center", padding: s.xl }}>
               <Icon
                 name={
-                  checkIn === l.id
+                  active.data?.location_id === l.id
                     ? "checkmark-circle-outline"
                     : "location-outline"
                 }
@@ -70,21 +103,26 @@ export default function Report() {
                 color={c.primary}
               />
               <Copy variant="title">
-                {checkIn === l.id ? "Checked in" : "You’re here!"}
+                {active.data?.location_id === l.id
+                  ? "Checked in"
+                  : "Study here?"}
               </Copy>
               <Copy muted style={{ textAlign: "center" }}>
-                {checkIn === l.id
+                {active.data?.location_id === l.id
                   ? "Thanks for helping StudySpot. Enjoy your focus time."
-                  : "Check in to help improve crowd estimates."}
+                  : "Check in to help improve crowd estimates. Other students see only aggregate information."}
               </Copy>
-              {checkIn && checkIn !== l.id && (
+              {active.data && active.data.location_id !== l.id && (
                 <Copy muted variant="caption">
-                  This will move your demo check-in from your previous space.
+                  This will end your previous check-in.
                 </Copy>
               )}
               <Button
-                label={checkIn === l.id ? "Check Out" : "Check In"}
-                onPress={() => setCheckIn(checkIn === l.id ? null : l.id)}
+                label={
+                  active.data?.location_id === l.id ? "Check Out" : "Check In"
+                }
+                disabled={busy || active.loading}
+                onPress={() => void handleCheckIn(l.id)}
               />
             </Card>
           ) : submitted ? (
@@ -92,8 +130,7 @@ export default function Report() {
               <Icon name="checkmark-circle" size={64} color={c.primary} />
               <Copy variant="title">You made a difference.</Copy>
               <Copy muted style={{ textAlign: "center" }}>
-                Your demo report is saved for this session. Thanks for looking
-                out for your campus.
+                Your report helps other students choose a study spot.
               </Copy>
               <Button
                 label="Back to location"
@@ -111,44 +148,47 @@ export default function Report() {
           ) : (
             <View style={{ gap: s.lg }}>
               <Copy variant="heading">How crowded is it right now?</Copy>
-              {(["available", "moderate", "busy", "full"] as const).map(
-                (x, i) => (
-                  <View
-                    key={x}
-                    style={{
-                      borderLeftWidth: 3,
-                      borderLeftColor: getOccupancyColor(x),
-                      paddingLeft: s.md,
-                    }}
-                  >
-                    <Chip
-                      label={
-                        ["Lots of seats", "Moderate", "Busy", "Nearly full"][i]!
-                      }
-                      icon="people-outline"
-                      selected={level === x}
-                      onPress={() => setLevel(x)}
-                    />
-                  </View>
-                ),
-              )}
+              {(
+                ["lots_of_seats", "moderate", "busy", "nearly_full"] as const
+              ).map((x, i) => (
+                <View
+                  key={x}
+                  style={{
+                    borderLeftWidth: 3,
+                    borderLeftColor: getOccupancyColor(
+                      ["available", "moderate", "busy", "full"][i] as
+                        "available" | "moderate" | "busy" | "full",
+                    ),
+                    paddingLeft: s.md,
+                  }}
+                >
+                  <Chip
+                    label={
+                      ["Lots of seats", "Moderate", "Busy", "Nearly full"][i]!
+                    }
+                    icon="people-outline"
+                    selected={level === x}
+                    onPress={() => setLevel(x)}
+                  />
+                </View>
+              ))}
               <Button
                 label="Submit Crowd Report"
-                disabled={!level}
-                onPress={() => {
-                  if (level) {
-                    addReport({
-                      locationId: l.id,
-                      level,
-                      createdAt: new Date().toISOString(),
-                    });
-                    setSubmitted(true);
-                  }
-                }}
+                disabled={!level || busy}
+                onPress={() => void handleReport(l.id)}
               />
             </View>
           )}
-          <DemoNote text="Demo only · no location verification or report is sent to a server." />
+          {error && <Copy color={c.danger}>{error}</Copy>}
+          {active.error && (
+            <Copy muted variant="caption">
+              {active.error}
+            </Copy>
+          )}
+          <Copy muted variant="caption">
+            Location, when available, helps check proximity. GPS cannot verify
+            an indoor floor.
+          </Copy>
           <Button
             label="Return Home"
             secondary

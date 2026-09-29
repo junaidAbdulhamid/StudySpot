@@ -55,9 +55,12 @@ export const locationDto = z.object({
   }),
   current_occupancy: z
     .object({
-      percent,
-      level: z.enum(["available", "moderate", "busy", "full"]),
+      id: z.string(),
+      percent: percent.nullable(),
+      level: z.enum(["available", "moderate", "busy", "full", "unknown"]),
       confidence,
+      confidence_score: z.number().min(0).max(1),
+      signal_count: z.number().int().nonnegative(),
       source,
       estimated_at: timestamp,
     })
@@ -74,7 +77,6 @@ export const userDto = z.object({
   onboarding_completed: z.boolean(),
   avatar_url: z.string().nullable(),
   points: z.number(),
-  reliability_score: z.number().min(0).max(1),
 });
 export const preferencesDto = z.object({
   id: z.string(),

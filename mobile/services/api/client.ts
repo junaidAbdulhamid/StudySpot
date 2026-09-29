@@ -42,7 +42,12 @@ export function createApiClient(
       }, timeoutMs);
       try {
         const bridge = auth();
-        const protectedRequest = path === "/me" || path.startsWith("/me/");
+        const protectedRequest =
+          path === "/me" ||
+          path.startsWith("/me/") ||
+          path.startsWith("/checkins") ||
+          path.startsWith("/crowd-reports") ||
+          path.startsWith("/occupancy-validations");
         const subject = bridge?.subject();
         const ensureIdentity = () => {
           if (protectedRequest && (!subject || bridge?.subject() !== subject))
