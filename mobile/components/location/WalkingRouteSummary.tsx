@@ -28,7 +28,7 @@ export function WalkingRouteSummary({
       {current ? (
         <Copy muted>
           {current.route
-            ? `${formatDuration(current.route.durationSeconds)} · ${formatDistance(current.route.distanceMeters)} walking route (Mapbox)`
+            ? `${formatDuration(current.route.durationSeconds)} · ${formatDistance(current.route.distanceMeters)} walking route`
             : "Walking route unavailable. Use the straight-line distance above or open Directions."}
         </Copy>
       ) : (

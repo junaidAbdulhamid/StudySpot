@@ -4,6 +4,8 @@
   "private": true,
   "main": "expo-router/entry",
   "scripts": {
+    "postinstall": "node scripts/prepare-map-worker.mjs",
+    "prepare:map-worker": "node scripts/prepare-map-worker.mjs",
     "start": "expo start",
     "ios": "expo run:ios",
     "android": "expo run:android",
@@ -16,8 +18,8 @@
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.2",
+    "@maplibre/maplibre-react-native": "^11.4.0",
     "@react-native-async-storage/async-storage": "2.2.0",
-    "@rnmapbox/maps": "^10.3.5",
     "@supabase/supabase-js": "^2.117.2",
     "expo": "~57.0.25",
     "expo-auth-session": "~57.0.13",
@@ -31,7 +33,7 @@
     "expo-status-bar": "~57.0.1",
     "expo-system-ui": "~57.0.4",
     "expo-web-browser": "~57.0.3",
-    "mapbox-gl": "^2.15.0",
+    "maplibre-gl": "^6.11.2",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-native": "0.86.3",
@@ -45,7 +47,6 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.63.0",
-    "@types/mapbox-gl": "^3.4.1",
     "@types/node": "^26.6.3",
     "@types/react": "~19.2.4",
     "eslint": "^9.39.5",

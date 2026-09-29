@@ -1,6 +1,8 @@
 import { StudyLocation } from "../../types";
 import { Coordinate } from "../../utils/geospatial";
-export const mapToken = process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN ?? "";
+export const mapStyleUrl =
+  process.env.EXPO_PUBLIC_MAP_STYLE_URL ||
+  "https://tiles.openfreemap.org/styles/dark";
 export interface CampusMapProps {
   locations: StudyLocation[];
   selectedId: string | null;

@@ -1,8 +1,8 @@
 import { memo, useEffect, useRef, useState } from "react";
-import mapboxgl from "mapbox-gl";
-import "mapbox-gl/dist/mapbox-gl.css";
+import * as maplibregl from "maplibre-gl";
+import "maplibre-gl/dist/maplibre-gl.css";
 import { Copy } from "../common";
-import { CampusMapProps, mapGroups, mapToken } from "./mapModel";
+import { CampusMapProps, mapGroups, mapStyleUrl } from "./mapModel";
 import {
   getOccupancyColor,
   getOccupancyLevel,
@@ -17,20 +17,20 @@ export const CampusMap = memo(function CampusMap({
   recenter = 0,
 }: CampusMapProps) {
   const element = useRef<HTMLDivElement>(null);
-  const map = useRef<mapboxgl.Map | null>(null);
+  const map = useRef<maplibregl.Map | null>(null);
   const [ready, setReady] = useState(false);
   const [error, setError] = useState(false);
   const initial = useRef(center);
   initial.current = center;
   const hasCenter = !!center;
   useEffect(() => {
-    if (!mapToken || !element.current || !initial.current) return;
+    if (!element.current || !initial.current) return;
     try {
+      maplibregl.setWorkerUrl("/maplibre/maplibre-gl-worker.mjs");
       const origin = initial.current;
-      const instance = new mapboxgl.Map({
+      const instance = new maplibregl.Map({
         container: element.current,
-        accessToken: mapToken,
-        style: "mapbox://styles/mapbox/dark-v11",
+        style: mapStyleUrl,
         center: [origin.longitude, origin.latitude],
         zoom: 15,
       });
@@ -65,25 +65,18 @@ export const CampusMap = memo(function CampusMap({
       );
       button.style.cssText = `background:#07110f;color:white;padding:8px;border-radius:12px;border:${group.locations.some((l) => l.id === selectedId) ? 3 : 1}px solid ${getOccupancyColor(level)}`;
       button.onclick = () => onSelect(group.best.id);
-      return new mapboxgl.Marker({ element: button })
+      return new maplibregl.Marker({ element: button })
         .setLngLat([group.best.longitude, group.best.latitude])
         .addTo(instance);
     });
     if (position)
       markers.push(
-        new mapboxgl.Marker({ color: "#5DAAFF" })
+        new maplibregl.Marker({ color: "#5DAAFF" })
           .setLngLat([position.longitude, position.latitude])
           .addTo(instance),
       );
     return () => markers.forEach((marker) => marker.remove());
   }, [locations, selectedId, onSelect, position, ready]);
-  if (!mapToken)
-    return (
-      <Copy>
-        Map setup required: set EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN and restart.
-        Browse spaces below while maps are unavailable.
-      </Copy>
-    );
   return (
     <>
       {!ready && !error && <Copy>Loading campus map…</Copy>}
@@ -94,7 +87,7 @@ export const CampusMap = memo(function CampusMap({
       />
       {error && (
         <Copy>
-          Map unavailable. Check your connection and map token. Browse spaces
+          Map unavailable. Check your connection or map style. Browse spaces
           below.
         </Copy>
       )}

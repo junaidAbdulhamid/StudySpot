@@ -1,18 +1,20 @@
 import { memo, useEffect, useRef, useState } from "react";
-import { View, Pressable } from "react-native";
-import Mapbox from "@rnmapbox/maps";
+import { Pressable, View } from "react-native";
+import {
+  Camera,
+  CameraRef,
+  Map,
+  Marker,
+} from "@maplibre/maplibre-react-native";
 import { Copy } from "../common";
 import { colors } from "../../theme";
-import { CampusMapProps, mapGroups, mapToken } from "./mapModel";
+import { CampusMapProps, mapGroups, mapStyleUrl } from "./mapModel";
 import {
   getOccupancyColor,
   getOccupancyLevel,
   formatOccupancy,
 } from "../../utils/occupancy";
-if (mapToken) {
-  Mapbox.setAccessToken(mapToken);
-  Mapbox.setTelemetryEnabled(false);
-}
+
 export const CampusMap = memo(function CampusMap({
   locations,
   selectedId,
@@ -21,52 +23,47 @@ export const CampusMap = memo(function CampusMap({
   position,
   recenter = 0,
 }: CampusMapProps) {
-  const camera = useRef<Mapbox.Camera>(null);
+  const camera = useRef<CameraRef>(null);
   const [error, setError] = useState(false);
   const [loaded, setLoaded] = useState(false);
   useEffect(() => {
     if (center)
-      camera.current?.setCamera({
-        centerCoordinate: [center.longitude, center.latitude],
-        zoomLevel: 15,
-        animationDuration: 700,
+      camera.current?.easeTo({
+        center: [center.longitude, center.latitude],
+        zoom: 15,
+        duration: 700,
       });
   }, [center, recenter]);
-  if (!mapToken)
-    return (
-      <Copy>
-        Map setup required: set EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN and restart the
-        development build. Browse spaces below while maps are unavailable.
-      </Copy>
-    );
   if (!center) return <Copy>Loading campus map configuration…</Copy>;
   return (
     <View style={{ height: 400, borderRadius: 20, overflow: "hidden" }}>
-      <Mapbox.MapView
+      <Map
         style={{ flex: 1 }}
-        styleURL={Mapbox.StyleURL.Dark}
-        onMapLoadingError={() => setError(true)}
+        mapStyle={mapStyleUrl}
         onDidFinishLoadingMap={() => setLoaded(true)}
+        onDidFailLoadingMap={() => setError(true)}
       >
-        <Mapbox.Camera
+        <Camera
           ref={camera}
-          defaultSettings={{
-            centerCoordinate: [center.longitude, center.latitude],
-            zoomLevel: 15,
+          initialViewState={{
+            center: [center.longitude, center.latitude],
+            zoom: 15,
           }}
         />
         {mapGroups(locations).map((group) => {
           const selected = group.locations.some((l) => l.id === selectedId);
           const level = getOccupancyLevel(group.best.currentOccupancy);
           return (
-            <Mapbox.MarkerView
+            <Marker
               key={group.id}
-              coordinate={[group.best.longitude, group.best.latitude]}
+              id={group.id}
+              lngLat={[group.best.longitude, group.best.latitude]}
+              onPress={() => onSelect(group.best.id)}
             >
               <Pressable
-                onPress={() => onSelect(group.best.id)}
                 accessibilityRole="button"
                 accessibilityLabel={`${group.best.building}, ${level}, ${formatOccupancy(group.best.currentOccupancy)}, ${group.locations.length} study zones`}
+                onPress={() => onSelect(group.best.id)}
                 style={{
                   backgroundColor: colors.background,
                   borderWidth: selected ? 3 : 1,
@@ -80,13 +77,13 @@ export const CampusMap = memo(function CampusMap({
                   {formatOccupancy(group.best.currentOccupancy)} {level}
                 </Copy>
               </Pressable>
-            </Mapbox.MarkerView>
+            </Marker>
           );
         })}
         {position && (
-          <Mapbox.PointAnnotation
+          <Marker
             id="current-position"
-            coordinate={[position.longitude, position.latitude]}
+            lngLat={[position.longitude, position.latitude]}
           >
             <View
               accessibilityLabel="Your approximate location"
@@ -99,9 +96,9 @@ export const CampusMap = memo(function CampusMap({
                 borderColor: "white",
               }}
             />
-          </Mapbox.PointAnnotation>
+          </Marker>
         )}
-      </Mapbox.MapView>
+      </Map>
       {!loaded && !error && (
         <Copy
           style={{
@@ -116,7 +113,7 @@ export const CampusMap = memo(function CampusMap({
       )}
       {error && (
         <Copy>
-          Map could not load. Check your connection and map token. Study spaces
+          Map could not load. Check your connection or map style. Study spaces
           remain available below.
         </Copy>
       )}

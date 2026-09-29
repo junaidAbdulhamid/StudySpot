@@ -25,7 +25,7 @@ const responseSchema = z.object({
   ),
 });
 export function createRoutingProvider(
-  token: string,
+  walkingRouteBaseUrl: string,
   fetcher = fetch,
 ): RoutingProvider {
   const cache = new Map<string, { at: number; route: WalkingRoute | null }>();
@@ -39,7 +39,7 @@ export function createRoutingProvider(
       cache.clear();
     },
     async getWalkingRoute(origin, destination) {
-      if (!token) return null;
+      if (!walkingRouteBaseUrl) return null;
       const version = generation;
       const key = `${origin.longitude},${origin.latitude};${destination.longitude},${destination.latitude}`;
       const cached = cache.get(key);
@@ -49,10 +49,12 @@ export function createRoutingProvider(
       const timeout = setTimeout(() => controller.abort(), 8000);
       let route: WalkingRoute | null = null;
       try {
-        const response = await fetcher(
-          `https://api.mapbox.com/directions/v5/mapbox/walking/${key}?geometries=geojson&overview=simplified&access_token=${encodeURIComponent(token)}`,
-          { signal: controller.signal },
-        );
+        const url = new URL(`${walkingRouteBaseUrl.replace(/\/$/, "")}/${key}`);
+        url.searchParams.set("geometries", "geojson");
+        url.searchParams.set("overview", "simplified");
+        const response = await fetcher(url.toString(), {
+          signal: controller.signal,
+        });
         if (response.ok) {
           const result = responseSchema.safeParse(await response.json());
           const first = result.success ? result.data.routes[0] : null;
@@ -79,5 +81,5 @@ export function createRoutingProvider(
   };
 }
 export const routingService = createRoutingProvider(
-  process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN ?? "",
+  process.env.EXPO_PUBLIC_WALKING_ROUTE_URL ?? "",
 );
