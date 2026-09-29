@@ -1,5 +1,38 @@
 # Validation
 
+## Phase 6 — ML data pipeline
+
+Executed on 2026-09-29 in `ml/` (`uv sync`, then its own `.venv`). The pipeline does not modify the application API or mobile code:
+
+| Check | Result |
+| --- | --- |
+| Style | `ml/.venv/bin/ruff check ml` and `ml/.venv/bin/ruff format --check ml` passed |
+| Unit/integration tests | `ml/.venv/bin/pytest ml/tests -q --disable-warnings`: 51 passed — cleaning, event and knowledge time, target tiers, forecast alignment, splits, privacy, location isolation, DST, lags, rolling features, immutability and replay |
+| Synthetic data | `generate_synthetic_history --days 3 --locations 2` produced a labeled (`synthetic: true`) snapshot |
+| Synthetic build | `studyspot_occupancy_phase6_dev_v2`: 576 rows across 2 locations, 420 training-eligible, quality tiers A 236 / B 4 / C 336; five invalid reports quarantined |
+| Dataset validation | `validate_dataset --dataset ml/data/processed/studyspot_occupancy_phase6_dev_v2` replayed its frozen source (`source_replay: passed`) alongside schema/privacy/point-in-time/split checks |
+| Local PostgreSQL extraction | `extract_database` returned 12 locations, 12 estimates, 96 observations and no crowd events for 2026-09-27 UTC; read-only, bounded transaction completed |
+| Local PostgreSQL build | `build_dataset --start 2026-09-27 --end 2026-09-28 --version phase6_local_live` yielded 1,152 rows and **zero eligible training rows**; all labels unknown because no trusted/live occupancy evidence was present |
+| Immutability | Rebuilding an existing dataset version raises `FileExistsError`; artifact checksums are verified on read |
+
+The local database test is development data, not production campus history. See [phase6-report.md](phase6-report.md).
+
+## Phase 5 — crowdsourced occupancy
+
+Executed on 2026-09-28 with the local PostgreSQL/PostGIS test database and Redis container:
+
+| Check | Result |
+| --- | --- |
+| Alembic | `alembic upgrade head` and `alembic check` passed at revision `25630308138f`; migration round-trip runs in the backend suite |
+| Backend | `pytest -q`: 91 passed, one upstream Starlette/httpx deprecation warning |
+| Backend style | `ruff check .` and `ruff format --check .` passed |
+| Redis | `docker compose ... exec -T redis redis-cli ping`: `PONG`; cache hit/miss/TTL/failure tested with an isolated fake |
+| Expiry command | `python -m app.jobs.expire_checkins` completed; expiry behavior also covered by API tests |
+| Mobile | TypeScript, ESLint, Prettier and 29 logic tests passed |
+| Browser | Seven application journeys passed, including two users seeing the same aggregate after a report; separate live map journey passed |
+
+The test identities and data come from the isolated browser fixture, not a production Supabase project. The iOS path-space build issue and physical-device map/location QA remain open as noted in the Phase 4 section below. Production scheduler deployment and real student participation have not been exercised.
+
 ## Phase 4 — foreground geospatial discovery
 
 Executed September 27, 2026. This section records Phase 4; earlier sections are historical.
@@ -26,13 +59,15 @@ The access-log test verifies that precise coordinate query strings are removed. 
 contain only elapsed milliseconds, result count and a broad radius category.
 
 Mobile logic tests cover explicit foreground permission, denial/unavailable GPS, two-minute cache,
-expiry and late-result suppression, geodesic formatting, campus-timezone overnight hours, real route
-caching/fallback and floor grouping. Browser tests use injected coordinates and a deliberately blank
-map token. Building selectors exercise preview/navigation while the missing-token state is visible;
-they **do not verify Mapbox tiles, GPU rendering, native markers or actual device GPS**.
+expiry and late-result suppression, geodesic formatting, campus-timezone overnight hours, route
+caching/fallback and floor grouping. The separate live browser test uses OpenFreeMap's public style
+and confirms successful tile responses, canvas rendering and a selectable building marker. It does
+not verify native rendering or actual device GPS.
 
-Native compilation was not performed: CocoaPods is unavailable in this environment. A public Mapbox
-token is still needed for live map/routing QA. Test simulator/device recenter, OS Settings/revocation,
+CocoaPods is installed. An iOS simulator build compiled the MapLibre module, then stopped at Expo
+Constants' generated script, which splits this workspace's space-containing path at `/Users/junaid/Desktop/vs`.
+Native rendering is therefore still unverified. No token is needed for live maps. Walking-time QA
+requires a configured pedestrian routing service. Test simulator/device recenter, OS Settings/revocation,
 poor indoor accuracy, native Apple/Google Maps handoff and real provider failures using
 [the geospatial guide](geospatial.md). No real OAuth provider or production Supabase account was used
 by these tests. npm reports 14 moderate dependency advisories; no forced SDK downgrade was applied.

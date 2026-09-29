@@ -2,8 +2,8 @@
 
 FastAPI + SQLAlchemy 2 + PostgreSQL/PostGIS. Phase 2 built the persistent campus data foundation the
 mobile app reads from; Phase 3 replaced the development identity with real sign-in verified against
-Supabase Auth. Live occupancy, crowd reporting, proximity search, and forecasting models are later
-phases and are not implemented here.
+Supabase Auth. Phase 4 added proximity search; Phase 5 added crowd contributions, live occupancy
+estimates and Redis caching. ML forecasting remains a later phase.
 
 ## Layering
 
@@ -42,13 +42,13 @@ Schema details, the ER diagram, constraints, indexes and seed counts are in
 
 ## Local setup
 
-Requires Python 3.12+ and Docker (for PostGIS). [uv](https://docs.astral.sh/uv/) manages the
+Requires Python 3.12+ and Docker (for PostGIS and Redis). [uv](https://docs.astral.sh/uv/) manages the
 environment; `uv.lock` is committed.
 
 ```sh
-# 1. Start PostgreSQL + PostGIS (from repository root)
+# 1. Start PostgreSQL + PostGIS and Redis (from repository root)
 cp -n infrastructure/.env.example infrastructure/.env     # then set POSTGRES_PASSWORD
-docker compose --env-file infrastructure/.env -f infrastructure/compose.yaml up -d db
+docker compose --env-file infrastructure/.env -f infrastructure/compose.yaml up -d db redis
 
 # 2. Configure and install
 cd backend
@@ -69,6 +69,8 @@ local projects on 8000/5432; change the database port in compose configuration a
 
 Re-run `.venv/bin/python -m app.seed.run` whenever the demo forecasts have gone stale — seeded
 predictions only cover four hours from the moment they were written.
+Run `.venv/bin/python -m app.jobs.expire_checkins` every minute from an external scheduler to expire
+forgotten visits. See [the occupancy guide](../docs/occupancy-system.md).
 
 ## Environment variables
 
@@ -79,6 +81,13 @@ predictions only cover four hours from the moment they were written.
 | `APP_ENV` | `development` | `development` \| `test` \| `production` |
 | `DEBUG` | `false` | Must be `false` when `APP_ENV=production` |
 | `DATABASE_URL` | — | Required; must use the `postgresql+psycopg://` driver |
+| `REDIS_URL` | `redis://127.0.0.1:56379/0` | Disposable current-state cache; PostgreSQL remains authoritative |
+| `CHECKIN_DURATION_HOURS` | `4` | Maximum visit duration |
+| `CHECKIN_RADIUS_METERS` | `200` | Proximity verification threshold, not proof of indoor presence |
+| `REPORT_COOLDOWN_MINUTES` | `10` | Per user and location, also enforced in PostgreSQL |
+| `VALIDATION_COOLDOWN_MINUTES` | `10` | Per user and location |
+| `REPORT_HALF_LIFE_MINUTES` | `25` | Report recency weighting |
+| `OCCUPANCY_MAX_AGE_MINUTES` | `90` | Older estimates display as unknown |
 | `API_V1_PREFIX` | `/api/v1` | Leading slash, no trailing slash |
 | `CORS_ORIGINS` | `[]` | JSON list of explicit origins; `*` is rejected |
 | `SUPABASE_URL` | `""` | Your Supabase project's HTTPS URL; blank disables `/me` and its sub-routes |
@@ -104,6 +113,12 @@ All under `API_V1_PREFIX`. Single resources return `{"data": {...}}`; collection
 | GET | `/buildings/{building_id}` | |
 | GET | `/locations` | `search`, `campus_id`, `building_id`, `noise_level`, `amenities` (comma-separated slugs, all must match), `min_occupancy`, `max_occupancy`, `open_now`, `page`, `page_size` |
 | GET | `/locations/{location_id}` | Location, building, campus, amenities, hours, latest estimate, forecasts, recent observations |
+| GET | `/locations/{location_id}/occupancy` | Aggregate current estimate or unknown; Redis backed with PostgreSQL fallback |
+| POST | `/checkins` | Authenticated check-in; optional coordinate pair |
+| GET | `/me/checkins/active` | Caller’s active visit only |
+| POST | `/checkins/{checkin_id}/checkout` | Owner-only, idempotent |
+| POST | `/crowd-reports` | Authenticated categorical report; per-location cooldown |
+| POST | `/occupancy-validations` | Authenticated feedback on the current estimate |
 | GET | `/locations/{location_id}/predictions` | `hours_ahead` 1–24, default 4 |
 | GET | `/me` | The signed-in account; created on first sign-in |
 | PATCH | `/me` | Partial profile update (`display_name`, `avatar_url`) |
@@ -113,7 +128,7 @@ All under `API_V1_PREFIX`. Single resources return `{"data": {...}}`; collection
 | GET | `/me/preferences` | |
 | PATCH | `/me/preferences` | Partial; unknown fields and explicit nulls rejected |
 
-All `/me` routes require `Authorization: Bearer <supabase-access-token>` and answer 401
+All `/me` and contribution routes require `Authorization: Bearer <supabase-access-token>` and answer 401
 `UNAUTHORIZED` without one, or 503 `AUTH_UNAVAILABLE` if `SUPABASE_URL`/`SUPABASE_ANON_KEY` are unset
 or Supabase itself is unreachable.
 
@@ -191,9 +206,8 @@ behind a real third-party identity provider. `test_auth.py` covers `verify_acces
 
 ## Deliberately not implemented
 
-Proximity/radius search and walking distance (Phase 4) — the API never invents a walking time, since no
-user location is supplied — crowd reports and check-in writes (Phase 5), trained forecasting models
-(Phase 7), Redis, and production deployment. Every persisted estimate, observation and prediction is
-`source = 'seed'` development data, not a live campus reading. Account deletion has no route yet;
+Trained forecasting models (Phase 7), push delivery and production deployment remain out of scope.
+Prediction and historical seed records are examples, while current occupancy uses live contributions
+or displays unknown. Account deletion has no route yet;
 `AccountService.delete_application_data` exists as the internal primitive a future endpoint will call
 once it also revokes the Supabase identity.

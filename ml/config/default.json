@@ -1,0 +1,10 @@
+{
+  "bucket_minutes": 15,
+  "horizons": [15, 30, 60, 120],
+  "lag_minutes": [15, 30, 60, 120],
+  "rolling_minutes": [30, 60, 120],
+  "minimum_quality": "C_WEAK_ESTIMATE",
+  "target_weights": [1.0, 0.75, 0.35, 0.0],
+  "min_location_targets": 20,
+  "exclude_closed": true
+}

@@ -1,0 +1,20 @@
+[project]
+name = "studyspot-data"
+version = "0.6.0"
+requires-python = ">=3.12"
+dependencies = ["pandas>=2.2,<3", "pyarrow>=19,<24", "sqlalchemy>=2.0.38,<2.1", "psycopg[binary]>=3.2,<4", "python-dotenv>=1,<2"]
+
+[dependency-groups]
+dev = ["pytest>=8,<10", "ruff>=0.11,<1"]
+
+[tool.pytest.ini_options]
+pythonpath = [".."]
+testpaths = ["tests"]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+ignore = ["E501"]
