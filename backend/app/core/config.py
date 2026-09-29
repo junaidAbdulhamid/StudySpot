@@ -14,6 +14,13 @@ class Settings(BaseSettings):
     cors_origins: list[str] = Field(default_factory=list)
     supabase_url: str = ""
     supabase_anon_key: SecretStr = SecretStr("")
+    redis_url: str = "redis://127.0.0.1:56379/0"
+    checkin_duration_hours: int = Field(default=4, ge=1, le=12)
+    checkin_radius_meters: int = Field(default=200, ge=50, le=1000)
+    report_cooldown_minutes: int = Field(default=10, ge=1, le=120)
+    validation_cooldown_minutes: int = Field(default=10, ge=1, le=120)
+    report_half_life_minutes: int = Field(default=25, ge=1, le=180)
+    occupancy_max_age_minutes: int = Field(default=90, ge=30, le=240)
 
     @field_validator("supabase_url")
     @classmethod

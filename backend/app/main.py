@@ -25,8 +25,8 @@ def create_app():
     settings = get_settings()
     app = FastAPI(
         title="StudySpot API",
-        version="0.3.0",
-        description="Persistent campus data foundation with Supabase-verified sign-in. Seed forecasts are NOT ML output.",
+        version="0.5.0",
+        description="Campus discovery with Supabase-verified contributions and aggregate occupancy estimates. Seed forecasts are not ML output.",
         docs_url="/docs" if settings.app_env != "production" else None,
         redoc_url="/redoc" if settings.app_env != "production" else None,
         lifespan=lifespan,

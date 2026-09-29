@@ -104,16 +104,6 @@ def seed(db: Session, dev_user_id: str) -> dict[str, int]:
                     model.location_id == location.id, model.source == OccupancySource.SEED
                 )
             )
-        db.add(
-            OccupancyEstimate(
-                id=f"seed-estimate-{location.id}",
-                location_id=location.id,
-                occupancy_percent=zone["currentOccupancy"],
-                confidence=zone["occupancyConfidence"],
-                source=OccupancySource.SEED,
-                estimated_at=now,
-            )
-        )
         for i, prediction in enumerate(zone["predictions"][1:]):
             db.add(
                 OccupancyPrediction(

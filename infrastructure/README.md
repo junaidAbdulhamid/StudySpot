@@ -1,14 +1,14 @@
 # Development infrastructure
 
-`compose.yaml` runs one service — PostgreSQL 17 with PostGIS 3.5 — so local development has a
-reproducible database. This is development tooling only. Production containerization, orchestration,
+`compose.yaml` runs PostgreSQL 17 with PostGIS 3.5 and Redis 7 so local development has
+reproducible data and occupancy caching. This is development tooling only. Production containerization, orchestration,
 and cloud infrastructure are a later phase; nothing here is intended to be deployed.
 
 ## Start the database
 
 ```sh
 cp infrastructure/.env.example infrastructure/.env   # then set POSTGRES_PASSWORD
-docker compose --env-file infrastructure/.env -f infrastructure/compose.yaml up -d db
+docker compose --env-file infrastructure/.env -f infrastructure/compose.yaml up -d db redis
 ```
 
 Then follow [../backend/README.md](../backend/README.md) for migrations, seeding and the API.

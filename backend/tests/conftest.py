@@ -13,7 +13,14 @@ from fastapi.testclient import TestClient  # noqa: E402
 from app.api.dependencies import get_current_user  # noqa: E402
 from app.core.database import get_db  # noqa: E402
 from app.main import create_app  # noqa: E402
-from app.models import Favorite, User  # noqa: E402
+from app.models import (  # noqa: E402
+    CheckIn,
+    CrowdReport,
+    Favorite,
+    OccupancyEstimate,
+    OccupancyValidation,
+    User,
+)
 from app.seed.run import seed  # noqa: E402
 
 DEV_USER_ID = "dev-studyspot"
@@ -29,6 +36,8 @@ def engine():
     engine = create_engine(TEST_URL, hide_parameters=True)
     with Session(engine) as db:
         seed(db, DEV_USER_ID)
+        for model in (OccupancyValidation, CheckIn, CrowdReport, OccupancyEstimate):
+            db.execute(delete(model))
         # Browser recovery tests can leave this dedicated test profile changed.
         # Establish the favorite fixture without altering the developer database.
         db.execute(delete(Favorite).where(Favorite.user_id == DEV_USER_ID))

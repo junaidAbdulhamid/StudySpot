@@ -33,3 +33,22 @@ class OccupancySource(StrEnum):
     MODEL = "model"
     DERIVED = "derived"
     SENSOR = "sensor"
+
+
+class CheckInStatus(StrEnum):
+    ACTIVE = "active"
+    COMPLETED = "completed"
+    EXPIRED = "expired"
+
+
+class CrowdLevel(StrEnum):
+    LOTS_OF_SEATS = "lots_of_seats"
+    MODERATE = "moderate"
+    BUSY = "busy"
+    NEARLY_FULL = "nearly_full"
+
+
+class ValidationType(StrEnum):
+    ACCURATE = "accurate"
+    MORE_CROWDED = "more_crowded"
+    LESS_CROWDED = "less_crowded"

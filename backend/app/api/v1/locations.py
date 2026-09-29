@@ -39,7 +39,7 @@ def nearby_locations(db: Database, filters: Annotated[NearbyQuery, Query()]):
     "/{location_id}",
     response_model=Data[LocationDetail],
     summary="Get one study zone with building, campus, amenities, occupancy and forecasts",
-    description="Everything the detail and occupancy screens render. Occupancy and forecasts are persisted seed records in this phase.",
+    description="Location details include live aggregate occupancy when recent contributions exist. Forecasts remain seed examples.",
     responses=errors(404, 503),
 )
 def get_location(location_id: str, db: Database):

@@ -76,9 +76,12 @@ class AmenityRead(ReadModel):
 
 
 class OccupancyEstimateRead(BaseModel):
-    percent: int = Field(ge=0, le=100)
-    level: Literal["available", "moderate", "busy", "full"]
+    percent: int | None = Field(default=None, ge=0, le=100)
+    level: Literal["available", "moderate", "busy", "full", "unknown"]
     confidence: ConfidenceLevel
+    confidence_score: float = Field(ge=0, le=1)
+    signal_count: int = Field(ge=0)
+    id: str
     source: OccupancySource
     estimated_at: datetime
 
@@ -186,7 +189,6 @@ class UserRead(ReadModel):
     display_name: str
     avatar_url: str | None
     points: int
-    reliability_score: float
     onboarding_completed: bool
 
 
@@ -237,6 +239,8 @@ _ERROR_DESCRIPTIONS = {
     401: "A valid Supabase access token is required.",
     403: "Access denied.",
     404: "The requested record does not exist.",
+    409: "The current estimate changed; refresh before validating.",
+    429: "Contribution cooldown has not elapsed.",
     422: "Query parameters or body failed validation.",
     503: "The database or PostGIS is unavailable.",
 }

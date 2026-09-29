@@ -51,8 +51,7 @@ def test_list_detail(client):
     assert body["total"] == 12
     assert len(body["items"]) == 12
     detail = client.get(f"{API}/locations/zone-1").json()["data"]
-    assert detail["current_occupancy"]["percent"] == 28
-    assert detail["current_occupancy"]["source"] == "seed"
+    assert detail["current_occupancy"] is None
     assert detail["campus"]["id"] == "gmu-fairfax"
     assert detail["building"]["name"] == "Fenwick Library"
     assert len(detail["predictions"]) == 4
@@ -71,8 +70,8 @@ def test_list_detail(client):
         ("search=floor%204", 1),
         ("noise_level=quiet", 6),
         ("amenities=whiteboards,group-rooms", 3),
-        ("max_occupancy=39", 5),
-        ("min_occupancy=65&max_occupancy=84", 2),
+        ("max_occupancy=39", 0),
+        ("min_occupancy=65&max_occupancy=84", 0),
         ("building_id=fenwick-library", 4),
         ("campus_id=missing", 0),
         ("amenities=nonexistent", 0),
@@ -286,7 +285,7 @@ def test_idempotent_seed_preserves_user_choices(db):
     seed(db, "dev-studyspot")
     assert db.scalar(select(func.count()).select_from(StudyLocation)) == 12
     assert db.scalar(select(func.count()).select_from(OccupancyPrediction)) == 48
-    assert db.scalar(select(func.count()).select_from(OccupancyEstimate)) == 12
+    assert db.scalar(select(func.count()).select_from(OccupancyEstimate)) == 0
     assert preference.max_walking_minutes == 15
     assert (
         db.scalar(
@@ -420,7 +419,9 @@ def test_migration_roundtrip(engine):
         engine = create_engine(target, hide_parameters=True)
         with engine.connect() as connection:
             assert connection.scalar(text("SELECT PostGIS_Version()"))
-            assert connection.scalar(text("SELECT version_num FROM alembic_version")) == "0002"
+            assert (
+                connection.scalar(text("SELECT version_num FROM alembic_version")) == "25630308138f"
+            )
         engine.dispose()
     finally:
         with admin.connect() as connection:

@@ -25,7 +25,7 @@ def test_nearby_order_radius_filters(client):
         (r["distance_meters"], r["id"]) for r in rows
     )
     assert rows[-1]["distance_meters"] > rows[0]["distance_meters"]
-    assert all(r["amenities"] and r["current_occupancy"] for r in rows)
+    assert all(r["amenities"] and r["current_occupancy"] is None for r in rows)
     limited = client.get(PATH, params={**origin, "radius_meters": 1}).json()["data"]
     assert 0 < len(limited) < len(rows)
     for filters in [

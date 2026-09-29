@@ -16,13 +16,21 @@ from sqlalchemy import delete  # noqa: E402
 from alembic import command  # noqa: E402
 from app.core.database import get_session_factory  # noqa: E402
 from app.main import create_app  # noqa: E402
-from app.models import User  # noqa: E402
+from app.models import (  # noqa: E402
+    CheckIn,
+    CrowdReport,
+    OccupancyEstimate,
+    OccupancyValidation,
+    User,
+)
 from app.seed.run import seed  # noqa: E402
 from tests.e2e_auth import router as auth_router  # noqa: E402
 
 command.upgrade(Config("alembic.ini"), "head")
 with get_session_factory()() as db:
     seed(db, "dev-studyspot")
+    for model in (OccupancyValidation, CheckIn, CrowdReport, OccupancyEstimate):
+        db.execute(delete(model))
     db.execute(delete(User).where(User.auth_provider_id.is_not(None)))
     db.commit()
 app = create_app()

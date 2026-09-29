@@ -6,11 +6,22 @@ from app.api.v1 import (
     favorites,
     health,
     locations,
+    occupancy,
     predictions,
     preferences,
     users,
 )
 
 router = APIRouter()
-for module in (health, campuses, buildings, locations, predictions, users, favorites, preferences):
+for module in (
+    health,
+    campuses,
+    buildings,
+    locations,
+    occupancy,
+    predictions,
+    users,
+    favorites,
+    preferences,
+):
     router.include_router(module.router)

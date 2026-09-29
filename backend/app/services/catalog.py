@@ -28,6 +28,7 @@ from app.schemas.catalog import (
     Pagination,
     PredictionRead,
 )
+from app.services.occupancy_estimator import effective_confidence
 from app.utils.occupancy import classify_occupancy
 
 
@@ -96,6 +97,11 @@ class LocationService:
         results = []
         for row in rows:
             estimate = occupancy.get(row.id)
+            effective_score, effective_label = (
+                effective_confidence(estimate.confidence_score, estimate.estimated_at, now)
+                if estimate
+                else (0, None)
+            )
             results.append(
                 LocationDetail(
                     id=row.id,
@@ -117,8 +123,13 @@ class LocationService:
                     ),
                     current_occupancy=OccupancyEstimateRead(
                         percent=estimate.occupancy_percent,
-                        level=classify_occupancy(estimate.occupancy_percent),
-                        confidence=estimate.confidence,
+                        level=classify_occupancy(estimate.occupancy_percent)
+                        if estimate.occupancy_percent is not None
+                        else "unknown",
+                        confidence=effective_label,
+                        confidence_score=effective_score,
+                        signal_count=estimate.signal_count,
+                        id=estimate.id,
                         source=estimate.source,
                         estimated_at=estimate.estimated_at,
                     )

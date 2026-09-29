@@ -4,6 +4,7 @@ from geoalchemy2 import Geography
 from sqlalchemy import Time, and_, cast, func, or_, select
 from sqlalchemy.orm import Session, joinedload, selectinload
 
+from app.core.config import get_settings
 from app.models import (
     Amenity,
     Building,
@@ -13,6 +14,7 @@ from app.models import (
     OccupancyPrediction,
     StudyLocation,
 )
+from app.models.enums import OccupancySource
 from app.schemas.catalog import LocationQuery, Pagination
 
 
@@ -78,6 +80,9 @@ class LocationRepository:
             .where(
                 OccupancyEstimate.location_id == StudyLocation.id,
                 OccupancyEstimate.estimated_at <= now,
+                OccupancyEstimate.estimated_at
+                >= now - timedelta(minutes=get_settings().occupancy_max_age_minutes),
+                OccupancyEstimate.source != OccupancySource.SEED,
             )
             .order_by(OccupancyEstimate.estimated_at.desc(), OccupancyEstimate.id.desc())
             .limit(1)
@@ -165,7 +170,13 @@ class OccupancyRepository:
     def latest(self, ids: list[str], now: datetime):
         rows = self.db.scalars(
             select(OccupancyEstimate)
-            .where(OccupancyEstimate.location_id.in_(ids), OccupancyEstimate.estimated_at <= now)
+            .where(
+                OccupancyEstimate.location_id.in_(ids),
+                OccupancyEstimate.estimated_at <= now,
+                OccupancyEstimate.estimated_at
+                >= now - timedelta(minutes=get_settings().occupancy_max_age_minutes),
+                OccupancyEstimate.source != OccupancySource.SEED,
+            )
             .distinct(OccupancyEstimate.location_id)
             .order_by(
                 OccupancyEstimate.location_id,

@@ -17,16 +17,20 @@ from sqlalchemy import (
     Text,
     Time,
     UniqueConstraint,
+    text,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base, Created, Identity, Timestamps
 from app.models.enums import (
+    CheckInStatus,
     ConfidenceLevel,
+    CrowdLevel,
     NoiseLevel,
     NoisePreference,
     OccupancySource,
     StudyStyle,
+    ValidationType,
 )
 
 
@@ -183,11 +187,22 @@ class Favorite(Identity, Created, Base):
 class OccupancyEstimate(Identity, Created, Base):
     __tablename__ = "occupancy_estimates"
     __table_args__ = (
-        CheckConstraint("occupancy_percent BETWEEN 0 AND 100", name="percent"),
+        CheckConstraint(
+            "occupancy_percent IS NULL OR occupancy_percent BETWEEN 0 AND 100", name="percent"
+        ),
+        CheckConstraint("confidence_score BETWEEN 0 AND 1", name="confidence_score"),
         Index("ix_estimates_location_time", "location_id", "estimated_at"),
     )
     location_id: Mapped[str] = mapped_column(ForeignKey("study_locations.id", ondelete="CASCADE"))
-    occupancy_percent: Mapped[int] = mapped_column(Integer)
+    occupancy_percent: Mapped[int | None] = mapped_column(Integer)
+    confidence_score: Mapped[float] = mapped_column(Float, default=0, server_default="0")
+    signal_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    recent_report_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    active_checkin_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    recent_validation_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    manual_observation_used: Mapped[bool] = mapped_column(
+        Boolean, default=False, server_default="false"
+    )
     confidence: Mapped[ConfidenceLevel] = mapped_column(enum_type(ConfidenceLevel))
     source: Mapped[OccupancySource] = mapped_column(enum_type(OccupancySource))
     estimated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
@@ -208,6 +223,63 @@ class OccupancyObservation(Identity, Created, Base):
     total_seats: Mapped[int | None] = mapped_column(Integer)
     source: Mapped[OccupancySource] = mapped_column(enum_type(OccupancySource))
     observed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
+class CheckIn(Identity, Timestamps, Base):
+    __tablename__ = "checkins"
+    __table_args__ = (
+        CheckConstraint(
+            "checked_out_at IS NULL OR checked_out_at >= checked_in_at", name="chronology"
+        ),
+        Index(
+            "ix_checkins_one_active_user",
+            "user_id",
+            unique=True,
+            postgresql_where=text("status = 'active'"),
+        ),
+        Index("ix_checkins_location_status_expiry", "location_id", "status", "expires_at"),
+    )
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    location_id: Mapped[str] = mapped_column(ForeignKey("study_locations.id", ondelete="CASCADE"))
+    status: Mapped[CheckInStatus] = mapped_column(enum_type(CheckInStatus))
+    checked_in_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    checked_out_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    location_verified: Mapped[bool] = mapped_column(Boolean, default=False)
+    verification_distance_meters: Mapped[float | None] = mapped_column(Float)
+
+
+class CrowdReport(Identity, Created, Base):
+    __tablename__ = "crowd_reports"
+    __table_args__ = (
+        CheckConstraint("normalized_value BETWEEN 0 AND 100", name="normalized"),
+        Index("ix_reports_location_time", "location_id", "submitted_at"),
+        Index("ix_reports_user_location_time", "user_id", "location_id", "submitted_at"),
+    )
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    location_id: Mapped[str] = mapped_column(ForeignKey("study_locations.id", ondelete="CASCADE"))
+    crowd_level: Mapped[CrowdLevel] = mapped_column(enum_type(CrowdLevel))
+    normalized_value: Mapped[int] = mapped_column(Integer)
+    submitted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    location_verified: Mapped[bool] = mapped_column(Boolean, default=False)
+    user_reliability_at_submission: Mapped[float] = mapped_column(Float)
+    reliability_evaluated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class OccupancyValidation(Identity, Created, Base):
+    __tablename__ = "occupancy_validations"
+    __table_args__ = (
+        UniqueConstraint("user_id", "estimate_id"),
+        Index("ix_validations_location_time", "location_id", "submitted_at"),
+    )
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    location_id: Mapped[str] = mapped_column(ForeignKey("study_locations.id", ondelete="CASCADE"))
+    estimate_id: Mapped[str] = mapped_column(
+        ForeignKey("occupancy_estimates.id", ondelete="CASCADE")
+    )
+    validation_type: Mapped[ValidationType] = mapped_column(enum_type(ValidationType))
+    submitted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    location_verified: Mapped[bool] = mapped_column(Boolean, default=False)
 
 
 class OccupancyPrediction(Identity, Created, Base):
